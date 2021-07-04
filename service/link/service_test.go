@@ -65,7 +65,7 @@ func TestGetLink(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return([]byte(ret), nil)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -86,7 +86,7 @@ func TestGetLink(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -106,7 +106,7 @@ func TestGetLink(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -134,7 +134,7 @@ func TestSaveLink(t *testing.T) {
 			Save(gomock.Any(), id, []byte(req.URL)).
 			Return(nil)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -160,7 +160,7 @@ func TestSaveLink(t *testing.T) {
 		r, err := http.NewRequest("POST", "/"+id, bytes.NewBuffer(body))
 		require.NoError(t, err)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -185,7 +185,7 @@ func TestSaveLink(t *testing.T) {
 			Save(gomock.Any(), id, []byte(req.URL)).
 			Return(app.ErrConflict)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -210,7 +210,7 @@ func TestSaveLink(t *testing.T) {
 			Save(gomock.Any(), id, []byte(req.URL)).
 			Return(fmt.Errorf("error"))
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)

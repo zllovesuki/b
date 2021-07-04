@@ -65,7 +65,7 @@ func TestGetText(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return([]byte(ret), nil)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -88,7 +88,7 @@ func TestGetText(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -108,7 +108,7 @@ func TestGetText(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -136,7 +136,7 @@ func TestSaveText(t *testing.T) {
 			Save(gomock.Any(), id, []byte(req.Text)).
 			Return(nil)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -166,7 +166,7 @@ func TestSaveText(t *testing.T) {
 			Save(gomock.Any(), id, []byte(req.Text)).
 			Return(app.ErrConflict)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -191,7 +191,7 @@ func TestSaveText(t *testing.T) {
 			Save(gomock.Any(), id, []byte(req.Text)).
 			Return(fmt.Errorf("error"))
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)

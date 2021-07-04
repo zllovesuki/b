@@ -95,19 +95,11 @@ func (s *Service) retrieveLink(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SaveRoute returns a mountable route for shoterning URL
-func (s *Service) SaveRoute() http.Handler {
+// Route returns a mountable route for URL service
+func (s *Service) Route() http.Handler {
 	r := chi.NewRouter()
 
 	r.Post("/{id}", s.saveLink)
-
-	return r
-}
-
-// RetrieveRoute returns a mountable route for redirecting to long URL
-func (s *Service) RetrieveRoute() http.Handler {
-	r := chi.NewRouter()
-
 	r.Get("/{id}", s.retrieveLink)
 
 	return r

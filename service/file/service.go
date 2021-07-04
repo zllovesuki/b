@@ -2,14 +2,15 @@ package file
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 
-	"github.com/go-chi/chi"
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
+
+	"github.com/go-chi/chi"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
 
@@ -153,19 +154,11 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SaveRoute returns a mountable route for saving file
-func (s *Service) SaveRoute() http.Handler {
+// Route returns a mountable route for file service
+func (s *Service) Route() http.Handler {
 	r := chi.NewRouter()
 
 	r.Post("/{id}", s.saveFile)
-
-	return r
-}
-
-// RetrieveRoute returns a mountable route for retrieving uploaded file
-func (s *Service) RetrieveRoute() http.Handler {
-	r := chi.NewRouter()
-
 	r.Get("/{id}", s.retrieveFile)
 
 	return r

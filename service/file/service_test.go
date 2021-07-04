@@ -90,7 +90,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(dep.testFile, nil)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -111,7 +111,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -131,7 +131,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -161,7 +161,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -191,7 +191,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -210,7 +210,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), id).
 			Return([]byte("hi"), nil)
 
-		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -275,7 +275,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), id).
 			Return(mockRecorder, nil)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -309,7 +309,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), id, buf).
 			Return(app.ErrConflict)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -337,7 +337,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), id, buf).
 			Return(fmt.Errorf("error"))
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -369,7 +369,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -401,7 +401,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), id).
 			Return(nil, app.ErrConflict)
 
-		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+		dep.service.Route().ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)

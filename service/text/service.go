@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/buger/jsonparser"
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
 
+	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -97,19 +97,11 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// SaveRoute returns a mountable route for saving text
-func (s *Service) SaveRoute() http.Handler {
+// Route returns a mountable route for text service
+func (s *Service) Route() http.Handler {
 	r := chi.NewRouter()
 
 	r.Post("/{id}", s.saveText)
-
-	return r
-}
-
-// RetrieveRoute returns a mountable route for retrieving text
-func (s *Service) RetrieveRoute() http.Handler {
-	r := chi.NewRouter()
-
 	r.Get("/{id}", s.retrieveText)
 
 	return r
