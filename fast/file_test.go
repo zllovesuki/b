@@ -13,9 +13,7 @@ import (
 	"github.com/zllovesuki/b/app"
 )
 
-const (
-	fileTestFolder = "fileFastTmp"
-)
+var p = filepath.Join(os.TempDir(), "b-fast")
 
 type testDependencies struct {
 	f    *FileFastBackend
@@ -23,9 +21,7 @@ type testDependencies struct {
 }
 
 func getFixtures(t *testing.T) (*testDependencies, func()) {
-	require.NotEmpty(t, fileTestFolder)
-
-	b, err := NewFileFastBackend(fileTestFolder)
+	b, err := NewFileFastBackend(p)
 	require.NoError(t, err)
 
 	file, err := os.Open(filepath.Join("fixtures", "image.jpg"))
@@ -35,7 +31,7 @@ func getFixtures(t *testing.T) (*testDependencies, func()) {
 			f:    b,
 			file: file,
 		}, func() {
-			os.RemoveAll(fileTestFolder)
+			os.RemoveAll(p)
 			file.Close()
 		}
 }

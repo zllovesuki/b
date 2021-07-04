@@ -71,7 +71,7 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 		}
 	}
 
-	file, err := os.OpenFile(p, os.O_CREATE, 0644)
+	file, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot open file")
 	}
@@ -140,5 +140,12 @@ func ttlExceeded(f *os.File, ttl int64) (bool, error) {
 		return false, errors.Wrap(err, "unable to get file metadata")
 	}
 
-	return time.Now().After(t.BirthTime().Add(time.Duration(ttl))), nil
+	var ref time.Time
+	if t.HasBirthTime() {
+		ref = t.BirthTime()
+	} else if t.HasChangeTime() {
+		ref = t.ChangeTime()
+	}
+
+	return !ref.IsZero() && time.Now().After(ref.Add(time.Duration(ttl))), nil
 }
