@@ -1,6 +1,9 @@
 package response
 
-import "fmt"
+import (
+	"fmt"
+	"net/http"
+)
 
 type Error struct {
 	StatusCode int
@@ -39,25 +42,29 @@ func makeError(status int) *Error {
 // -----------------------------------------------
 
 func ErrUnexpected() *Error {
-	return makeError(500).
+	return makeError(http.StatusInternalServerError).
 		WithMessage("An unexpected error has occured")
 }
 
 func ErrBadRequest() *Error {
-	return makeError(400).
+	return makeError(http.StatusBadRequest).
 		WithMessage("Bad request")
 }
 
 func ErrNotFound() *Error {
-	return makeError(404).
+	return makeError(http.StatusNotFound).
 		WithMessage("Requested resources not found")
 }
 
 func ErrConflict() *Error {
-	return makeError(409).
+	return makeError(http.StatusConflict).
 		WithMessage("Conflict")
 }
 
 func ErrInvalidJson() *Error {
 	return ErrBadRequest().AddMessages("Invalid JSON body")
+}
+
+func ErrorMethodNotAllowed() *Error {
+	return makeError(http.StatusMethodNotAllowed).AddMessages("Method not allowed")
 }
