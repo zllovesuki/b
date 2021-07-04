@@ -66,13 +66,13 @@ func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ret, t, _, err := jsonparser.Get(buf, "text")
-	if err != nil || t != jsonparser.String {
+	ret, err := jsonparser.GetString(buf, "text")
+	if err != nil {
 		response.WriteError(w, r, response.ErrInvalidJson())
 		return
 	}
 
-	err = s.Backend.Save(r.Context(), prefix+id, ret)
+	err = s.Backend.Save(r.Context(), prefix+id, []byte(ret))
 	switch err {
 	default:
 		s.Logger.Error("unable to save to backend", zap.Error(err))
@@ -97,7 +97,8 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "text not found")
 	case nil:
-		w.Write(text)
+		w.Header().Set("Content-Type", "text/plain")
+		w.Write([]byte(string(text)))
 	}
 }
 
