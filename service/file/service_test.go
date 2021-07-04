@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
-	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 )
 
 // fixtures image obtained from https://unsplash.com/photos/cpNor3rFdWk
@@ -38,8 +38,7 @@ func getFixtures(t *testing.T) (*testDependencies, func()) {
 
 	recorder := httptest.NewRecorder()
 
-	logger, err := zap.NewDevelopment()
-	require.NoError(t, err)
+	logger := zaptest.NewLogger(t)
 
 	base := "http://hello"
 
@@ -167,6 +166,55 @@ func TestGetFile(t *testing.T) {
 		resp := dep.recorder.Result()
 
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("file backend reported missing but metadata reported found", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "wqrewr"
+		meta := Metadata{
+			Filename:    "image.jpg",
+			ContentType: "image/jpeg",
+		}
+		buf, err := json.Marshal(meta)
+		require.NoError(t, err)
+
+		r, err := http.NewRequest("GET", "/"+id, nil)
+		require.NoError(t, err)
+
+		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), id).
+			Return(buf, nil)
+
+		dep.mockFileBackend.EXPECT().
+			Retrieve(gomock.Any(), id).
+			Return(nil, app.ErrNotFound)
+
+		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("corrupted metadata should return err", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "wqrewr"
+
+		r, err := http.NewRequest("GET", "/"+id, nil)
+		require.NoError(t, err)
+
+		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), id).
+			Return([]byte("hi"), nil)
+
+		dep.service.RetrieveRoute().ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
 	})
 }
 
@@ -320,6 +368,38 @@ func TestSaveFile(t *testing.T) {
 		dep.mockFileBackend.EXPECT().
 			Save(gomock.Any(), id).
 			Return(nil, fmt.Errorf("error"))
+
+		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("conflict in file backend", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "wqrewr"
+		meta := Metadata{
+			Filename:    "image.jpg",
+			ContentType: "image/jpeg",
+		}
+		buf, err := json.Marshal(meta)
+		require.NoError(t, err)
+
+		body, writer, _ := getMultipart(t, dep.testFile, meta)
+
+		r, err := http.NewRequest("POST", "/"+id, body)
+		require.NoError(t, err)
+		r.Header.Add("Content-Type", writer.FormDataContentType())
+
+		dep.mockMetadataBackend.EXPECT().
+			Save(gomock.Any(), id, buf).
+			Return(nil)
+
+		dep.mockFileBackend.EXPECT().
+			Save(gomock.Any(), id).
+			Return(nil, app.ErrConflict)
 
 		dep.service.SaveRoute().ServeHTTP(dep.recorder, r)
 

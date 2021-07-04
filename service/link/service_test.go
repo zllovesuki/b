@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
-	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 
 	"github.com/golang/mock/gomock"
 )
@@ -29,8 +29,7 @@ func getFixtures(t *testing.T) (*testDependencies, func()) {
 
 	recorder := httptest.NewRecorder()
 
-	logger, err := zap.NewDevelopment()
-	require.NoError(t, err)
+	logger := zaptest.NewLogger(t)
 
 	base := "http://hello"
 

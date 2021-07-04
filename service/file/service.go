@@ -81,11 +81,11 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	fileReader, err := s.FileBackend.Retrieve(r.Context(), id)
 	switch err {
 	default:
-		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err), zap.String("id", id))
+		s.Logger.Error("unable to retrieve from file backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected())
 	case app.ErrNotFound:
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "file not found")
+		s.Logger.Error("file backend returned not found when metadata exists", zap.Error(err), zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected())
 	case nil:
 		defer fileReader.Close()
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
@@ -145,7 +145,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.ErrUnexpected())
 	case app.ErrConflict:
 		s.Logger.Error("conflicting identifier in file backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		response.WriteError(w, r, response.ErrUnexpected())
 	case nil:
 		defer writer.Close()
 		io.Copy(writer, file)
