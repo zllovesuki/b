@@ -17,12 +17,20 @@ type basicRedis struct {
 var _ app.Backend = &basicRedis{}
 
 // NewBasicRedisBackend returns a redis backed storage for the application
-func NewBasicRedisBackend(url string) app.Backend {
-	return &basicRedis{
+func NewBasicRedisBackend(url string) (app.Backend, error) {
+	b := &basicRedis{
 		cli: redis.NewClient(&redis.Options{
 			Addr: url,
 		}),
 	}
+	context, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if err := b.cli.Ping(context).Err(); err != nil {
+		return nil, err
+	}
+
+	return b, nil
 }
 
 func (b *basicRedis) Save(c context.Context, identifier string, data []byte) error {
@@ -43,11 +51,11 @@ func (b *basicRedis) SaveTTL(c context.Context, identifier string, data []byte, 
 func (b *basicRedis) Retrieve(c context.Context, identifier string) ([]byte, error) {
 	ret, err := b.cli.Get(c, identifier).Bytes()
 	switch err {
+	default:
+		return nil, errors.Wrap(err, "unexpected error from redis when retrieving")
 	case redis.Nil:
 		return nil, app.ErrNotFound
 	case nil:
-		return nil, errors.Wrap(err, "unexpected error from redis when retrieving")
-	default:
 		return ret, nil
 	}
 }
