@@ -10,15 +10,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type basicRedis struct {
+type RedisBackend struct {
 	cli *redis.Client
 }
 
-var _ app.Backend = &basicRedis{}
+var _ app.Backend = &RedisBackend{}
 
 // NewBasicRedisBackend returns a redis backed storage for the application
-func NewBasicRedisBackend(url string) (app.Backend, error) {
-	b := &basicRedis{
+func NewBasicRedisBackend(url string) (*RedisBackend, error) {
+	b := &RedisBackend{
 		cli: redis.NewClient(&redis.Options{
 			Addr: url,
 		}),
@@ -33,11 +33,11 @@ func NewBasicRedisBackend(url string) (app.Backend, error) {
 	return b, nil
 }
 
-func (b *basicRedis) Save(c context.Context, identifier string, data []byte) error {
+func (b *RedisBackend) Save(c context.Context, identifier string, data []byte) error {
 	return b.SaveTTL(c, identifier, data, 0)
 }
 
-func (b *basicRedis) SaveTTL(c context.Context, identifier string, data []byte, ttl time.Duration) error {
+func (b *RedisBackend) SaveTTL(c context.Context, identifier string, data []byte, ttl time.Duration) error {
 	s, err := b.cli.SetNX(c, identifier, data, ttl).Result()
 	if err != nil {
 		return errors.Wrap(err, "unexpected error from redis when saving")
@@ -48,7 +48,7 @@ func (b *basicRedis) SaveTTL(c context.Context, identifier string, data []byte, 
 	return nil
 }
 
-func (b *basicRedis) Retrieve(c context.Context, identifier string) ([]byte, error) {
+func (b *RedisBackend) Retrieve(c context.Context, identifier string) ([]byte, error) {
 	ret, err := b.cli.Get(c, identifier).Bytes()
 	switch err {
 	default:

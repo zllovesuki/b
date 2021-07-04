@@ -6,34 +6,30 @@ import (
 	"testing"
 	"time"
 
-	redis "github.com/go-redis/redis/v8"
 	"github.com/stretchr/testify/require"
 	"github.com/zllovesuki/b/app"
 )
 
-func getFixtures(t *testing.T) (*basicRedis, func()) {
-	cli := redis.NewClient(&redis.Options{
-		Addr: "127.0.0.1:6379",
-	})
+func getFixtures(t *testing.T) (*RedisBackend, func()) {
+	b, err := NewBasicRedisBackend("127.0.0.1:6379")
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := cli.Ping(ctx).Err()
+	err = b.cli.Ping(ctx).Err()
 	require.NoError(t, err)
 
 	rand.Seed(time.Now().Unix())
 
-	return &basicRedis{
-			cli: cli,
-		}, func() {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			defer cancel()
-			err := cli.FlushAll(ctx).Err()
-			require.NoError(t, err)
-			err = cli.Close()
-			require.NoError(t, err)
-		}
+	return b, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		err := b.cli.FlushAll(ctx).Err()
+		require.NoError(t, err)
+		err = b.cli.Close()
+		require.NoError(t, err)
+	}
 }
 
 func TestRedisBackend(t *testing.T) {
