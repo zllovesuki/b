@@ -62,7 +62,7 @@ func TestGetLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return([]byte(ret), nil)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -83,7 +83,7 @@ func TestGetLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, app.ErrNotFound)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -103,7 +103,7 @@ func TestGetLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, fmt.Errorf("error"))
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -131,7 +131,7 @@ func TestSaveLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), id, []byte(req.URL)).
+			Save(gomock.Any(), prefix+id, []byte(req.URL)).
 			Return(nil)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -182,7 +182,7 @@ func TestSaveLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), id, []byte(req.URL)).
+			Save(gomock.Any(), prefix+id, []byte(req.URL)).
 			Return(app.ErrConflict)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -207,7 +207,7 @@ func TestSaveLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), id, []byte(req.URL)).
+			Save(gomock.Any(), prefix+id, []byte(req.URL)).
 			Return(fmt.Errorf("error"))
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)

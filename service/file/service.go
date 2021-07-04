@@ -14,6 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	prefix = "f-"
+)
+
 type Options struct {
 	BaseURL         string
 	MetadataBackend app.Backend
@@ -58,7 +62,7 @@ type Metadata struct {
 func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	m, err := s.MetadataBackend.Retrieve(r.Context(), id)
+	m, err := s.MetadataBackend.Retrieve(r.Context(), prefix+id)
 	switch err {
 	default:
 		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err))
@@ -79,7 +83,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileReader, err := s.FileBackend.Retrieve(r.Context(), id)
+	fileReader, err := s.FileBackend.Retrieve(r.Context(), prefix+id)
 	switch err {
 	default:
 		s.Logger.Error("unable to retrieve from file backend", zap.Error(err), zap.String("id", id))
@@ -127,7 +131,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.MetadataBackend.Save(r.Context(), id, buf)
+	err = s.MetadataBackend.Save(r.Context(), prefix+id, buf)
 	switch err {
 	default:
 		s.Logger.Error("unable to save to metadata backend", zap.Error(err))
@@ -139,7 +143,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	case nil:
 	}
 
-	writer, err := s.FileBackend.Save(r.Context(), id)
+	writer, err := s.FileBackend.Save(r.Context(), prefix+id)
 	switch err {
 	default:
 		s.Logger.Error("unable to save to file backend", zap.Error(err))

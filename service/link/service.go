@@ -14,6 +14,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	prefix = "l-"
+)
+
 type Options struct {
 	BaseURL string
 	Backend app.Backend
@@ -67,7 +71,7 @@ func (s *Service) saveLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.Backend.Save(r.Context(), id, []byte(req.URL))
+	err = s.Backend.Save(r.Context(), prefix+id, []byte(req.URL))
 	switch err {
 	default:
 		s.Logger.Error("unable to save to backend", zap.Error(err))
@@ -82,7 +86,7 @@ func (s *Service) saveLink(w http.ResponseWriter, r *http.Request) {
 func (s *Service) retrieveLink(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	long, err := s.Backend.Retrieve(r.Context(), id)
+	long, err := s.Backend.Retrieve(r.Context(), prefix+id)
 	switch err {
 	default:
 		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))

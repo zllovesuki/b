@@ -83,11 +83,11 @@ func TestGetFile(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(buf, nil)
 
 		dep.mockFileBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(dep.testFile, nil)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -108,7 +108,7 @@ func TestGetFile(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, app.ErrNotFound)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -128,7 +128,7 @@ func TestGetFile(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, fmt.Errorf("error"))
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -154,11 +154,11 @@ func TestGetFile(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(buf, nil)
 
 		dep.mockFileBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, fmt.Errorf("error"))
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -184,11 +184,11 @@ func TestGetFile(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(buf, nil)
 
 		dep.mockFileBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, app.ErrNotFound)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -207,7 +207,7 @@ func TestGetFile(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
-			Retrieve(gomock.Any(), id).
+			Retrieve(gomock.Any(), prefix+id).
 			Return([]byte("hi"), nil)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -268,11 +268,11 @@ func TestSaveFile(t *testing.T) {
 		mockRecorder := &mockWriter{buf: make([]byte, 0)}
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), id, buf).
+			Save(gomock.Any(), prefix+id, buf).
 			Return(nil)
 
 		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), id).
+			Save(gomock.Any(), prefix+id).
 			Return(mockRecorder, nil)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -306,7 +306,7 @@ func TestSaveFile(t *testing.T) {
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), id, buf).
+			Save(gomock.Any(), prefix+id, buf).
 			Return(app.ErrConflict)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -334,7 +334,7 @@ func TestSaveFile(t *testing.T) {
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), id, buf).
+			Save(gomock.Any(), prefix+id, buf).
 			Return(fmt.Errorf("error"))
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -362,11 +362,11 @@ func TestSaveFile(t *testing.T) {
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), id, buf).
+			Save(gomock.Any(), prefix+id, buf).
 			Return(nil)
 
 		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), id).
+			Save(gomock.Any(), prefix+id).
 			Return(nil, fmt.Errorf("error"))
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
@@ -394,11 +394,11 @@ func TestSaveFile(t *testing.T) {
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), id, buf).
+			Save(gomock.Any(), prefix+id, buf).
 			Return(nil)
 
 		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), id).
+			Save(gomock.Any(), prefix+id).
 			Return(nil, app.ErrConflict)
 
 		dep.service.Route().ServeHTTP(dep.recorder, r)
