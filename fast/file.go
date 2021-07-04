@@ -27,7 +27,7 @@ func NewFileFastBackend(dataDir string) (*FileFastBackend, error) {
 
 	info, err := os.Stat(dataDir)
 	if errors.Is(err, os.ErrNotExist) {
-		if err := os.Mkdir(dataDir, 0755); err != nil {
+		if err := os.Mkdir(dataDir, 0750); err != nil {
 			return nil, errors.New("error creating dataDir")
 		}
 	} else {
@@ -50,7 +50,7 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 
 	_, err := os.Stat(p)
 	if !errors.Is(err, os.ErrNotExist) {
-		f, err := os.OpenFile(p, os.O_RDONLY, 0755)
+		f, err := os.OpenFile(p, os.O_RDONLY, 0600)
 		if err != nil {
 			return nil, errors.Wrap(err, "cannot open file to check for expiration")
 		}
@@ -71,7 +71,7 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 		}
 	}
 
-	file, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0644)
+	file, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot open file")
 	}
@@ -89,7 +89,7 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.ReadCloser, error) {
 	p := filepath.Join(f.dataDir, identifier)
 
-	file, err := os.OpenFile(p, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(p, os.O_RDONLY, 0600)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot open file")
 	}
