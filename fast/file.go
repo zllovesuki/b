@@ -118,6 +118,8 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 	}
 
 	if ex {
+		// compaction on access
+		defer os.Remove(p)
 		return nil, app.ErrNotFound
 	}
 
