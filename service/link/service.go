@@ -103,8 +103,8 @@ func (s *Service) retrieveLink(w http.ResponseWriter, r *http.Request) {
 func (s *Service) Route() http.Handler {
 	r := chi.NewRouter()
 
-	r.Post("/{id}", s.saveLink)
-	r.Get("/{id}", s.retrieveLink)
+	r.Post("/{id:[a-zA-z0-9]+}", s.saveLink)
+	r.Get("/{id:[a-zA-Z0-9]+}", s.retrieveLink)
 
 	return r
 }

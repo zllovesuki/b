@@ -114,6 +114,23 @@ func TestGetText(t *testing.T) {
 
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})
+
+	t.Run("naughty id", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "../../../etc/hello"
+
+		r, err := http.NewRequest("GET", "/"+id, nil)
+		require.NoError(t, err)
+
+		dep.service.Route().ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	})
 }
 
 func TestSaveText(t *testing.T) {
@@ -195,5 +212,22 @@ func TestSaveText(t *testing.T) {
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("naughty id", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "../../../etc/hello"
+
+		r, err := http.NewRequest("POST", "/"+id, nil)
+		require.NoError(t, err)
+
+		dep.service.Route().ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+
 	})
 }

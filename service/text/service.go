@@ -106,8 +106,8 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 func (s *Service) Route() http.Handler {
 	r := chi.NewRouter()
 
-	r.Post("/{id}", s.saveText)
-	r.Get("/{id}", s.retrieveText)
+	r.Post("/{id:[a-zA-z0-9]+}", s.saveText)
+	r.Get("/{id:[a-zA-Z0-9]+}", s.retrieveText)
 
 	return r
 }

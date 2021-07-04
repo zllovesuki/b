@@ -168,8 +168,8 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 func (s *Service) Route() http.Handler {
 	r := chi.NewRouter()
 
-	r.Post("/{id}", s.saveFile)
-	r.Get("/{id}", s.retrieveFile)
+	r.Post("/{id:[a-zA-z0-9]+}", s.saveFile)
+	r.Get("/{id:[a-zA-Z0-9]+}", s.retrieveFile)
 
 	return r
 }
