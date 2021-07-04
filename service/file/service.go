@@ -56,8 +56,10 @@ func NewService(option Options) (*Service, error) {
 }
 
 type Metadata struct {
+	Version     int64
 	Filename    string
 	ContentType string
+	Size        string
 }
 
 func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +98,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 		defer fileReader.Close()
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
 		w.Header().Set("Content-Type", meta.ContentType)
+		w.Header().Set("Content-Length", meta.Size)
 		io.Copy(w, fileReader)
 	}
 }
@@ -103,7 +106,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	r.ParseMultipartForm(100 << 20) // 100 MB
+	r.ParseMultipartForm(64 << 20) // 64 MB
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		response.WriteError(w, r, response.ErrBadRequest())
@@ -122,8 +125,10 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	meta := Metadata{
+		Version:     1,
 		Filename:    header.Filename,
 		ContentType: http.DetectContentType(fileHeader),
+		Size:        fmt.Sprint(header.Size),
 	}
 
 	buf, err := json.Marshal(meta)

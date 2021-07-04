@@ -253,13 +253,15 @@ func TestSaveFile(t *testing.T) {
 
 		id := "wqrewr"
 		meta := Metadata{
+			Version:     1,
 			Filename:    "image.jpg",
 			ContentType: "image/jpeg",
 		}
-		buf, err := json.Marshal(meta)
-		require.NoError(t, err)
 
 		body, writer, length := getMultipart(t, dep.testFile, meta)
+		meta.Size = fmt.Sprint(length)
+		buf, err := json.Marshal(meta)
+		require.NoError(t, err)
 
 		r, err := http.NewRequest("POST", "/"+id, body)
 		require.NoError(t, err)
@@ -293,13 +295,15 @@ func TestSaveFile(t *testing.T) {
 
 		id := "wqrewr"
 		meta := Metadata{
+			Version:     1,
 			Filename:    "image.jpg",
 			ContentType: "image/jpeg",
 		}
+
+		body, writer, length := getMultipart(t, dep.testFile, meta)
+		meta.Size = fmt.Sprint(length)
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
-
-		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
 		r, err := http.NewRequest("POST", "/"+id, body)
 		require.NoError(t, err)
@@ -321,13 +325,15 @@ func TestSaveFile(t *testing.T) {
 
 		id := "wqrewr"
 		meta := Metadata{
+			Version:     1,
 			Filename:    "image.jpg",
 			ContentType: "image/jpeg",
 		}
+
+		body, writer, length := getMultipart(t, dep.testFile, meta)
+		meta.Size = fmt.Sprint(length)
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
-
-		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
 		r, err := http.NewRequest("POST", "/"+id, body)
 		require.NoError(t, err)
@@ -349,13 +355,15 @@ func TestSaveFile(t *testing.T) {
 
 		id := "wqrewr"
 		meta := Metadata{
+			Version:     1,
 			Filename:    "image.jpg",
 			ContentType: "image/jpeg",
 		}
+
+		body, writer, length := getMultipart(t, dep.testFile, meta)
+		meta.Size = fmt.Sprint(length)
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
-
-		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
 		r, err := http.NewRequest("POST", "/"+id, body)
 		require.NoError(t, err)
@@ -381,13 +389,15 @@ func TestSaveFile(t *testing.T) {
 
 		id := "wqrewr"
 		meta := Metadata{
+			Version:     1,
 			Filename:    "image.jpg",
 			ContentType: "image/jpeg",
 		}
+
+		body, writer, length := getMultipart(t, dep.testFile, meta)
+		meta.Size = fmt.Sprint(length)
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
-
-		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
 		r, err := http.NewRequest("POST", "/"+id, body)
 		require.NoError(t, err)
