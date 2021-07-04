@@ -6,6 +6,8 @@ import (
 
 	"github.com/zllovesuki/b/backend"
 	"github.com/zllovesuki/b/box"
+	"github.com/zllovesuki/b/fast"
+	"github.com/zllovesuki/b/service/file"
 	"github.com/zllovesuki/b/service/index"
 	"github.com/zllovesuki/b/service/link"
 	"github.com/zllovesuki/b/service/text"
@@ -54,10 +56,26 @@ func main() {
 		logger.Fatal("unable to get text service", zap.Error(err))
 	}
 
+	s, err := fast.NewFileFastBackend("data")
+	if err != nil {
+		logger.Fatal("unable to get file fast backend", zap.Error(err))
+	}
+
+	f, err := file.NewService(file.Options{
+		BaseURL:         "http://127.0.0.1:3000/f",
+		MetadataBackend: redis,
+		FileBackend:     s,
+		Logger:          logger,
+	})
+	if err != nil {
+		logger.Fatal("unable to get file service", zap.Error(err))
+	}
+
 	r := chi.NewRouter()
 	r.Mount("/", index.Route())
 	r.Mount("/l", l.Route())
 	r.Mount("/t", t.Route())
+	r.Mount("/f", f.Route())
 
 	http.ListenAndServe(":3000", r)
 }
