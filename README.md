@@ -11,6 +11,21 @@ In short:
 
 Project is inspired by [https://github.com/raftario/filite](https://github.com/raftario/filite). Actually, `index.html` is adopted from `filite`, because I'm too lazy to write a frontend.
 
+# Use cases
+
+## Quick file exchange with friends
+
+If you want to exchange some files (say 50MB of photos from last week's trip) with a friend, one of you can use [TryCloudflare](https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/trycloudflare#using-trycloudflare), then run `b` with baseURL set to your tunnel, so the other person can quickly upload/download file.
+
+## All-in-One self-hosted solutions
+
+If you want pastebin, bit.ly, and Firefox Send (roughly) all in the same spot, then `b` is perfect for you. You can even setup access control so `POST` requests can only come from your VPN, or requiring a password, so you can leave `b` running openly on the internet.
+
+## Promotion
+
+Sometimes you just want to show off the shortest domain you own and let everyone knows 
+😂.
+
 # Configuration
 
 Currently the MVP is hard coded to use:
