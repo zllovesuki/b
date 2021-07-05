@@ -1,10 +1,13 @@
 package file
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
@@ -106,29 +109,58 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	r.ParseMultipartForm(64 << 20) // 64 MB
-	file, header, err := r.FormFile("file")
+	form, err := r.MultipartReader()
 	if err != nil {
-		response.WriteError(w, r, response.ErrBadRequest())
-		return
-	}
-	defer file.Close()
-
-	fileHeader := make([]byte, 512)
-	if _, err := file.Read(fileHeader); err != nil {
+		s.Logger.Error("unable to open a multipart reader", zap.Error(err))
 		response.WriteError(w, r, response.ErrUnexpected())
 		return
 	}
-	if _, err := file.Seek(0, 0); err != nil {
-		response.WriteError(w, r, response.ErrBadRequest())
+
+	p, err := form.NextPart()
+	if err != nil && err != io.EOF {
+		s.Logger.Error("unable to read next part from multipart reader", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected())
+		return
+	}
+
+	if p.FormName() != "file" {
+		response.WriteError(w, r, response.ErrBadRequest().AddMessages("expecting \"file\" field"))
+		return
+	}
+
+	file := bufio.NewReader(p)
+	sniff, err := file.Peek(512)
+	if err != nil {
+		response.WriteError(w, r, response.ErrBadRequest().AddMessages("invalid file found"))
+		return
+	}
+
+	tmp, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("b-fast-%s-%s-tmp", filePrefix, id))
+	if err != nil {
+		s.Logger.Error("unable to open temporary file for buffering", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected())
+		return
+	}
+	defer os.Remove(tmp.Name())
+	defer tmp.Close()
+
+	length, err := io.Copy(tmp, file)
+	if err != nil && err != io.EOF {
+		s.Logger.Error("unable to write to temporary file", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected())
+		return
+	}
+	if _, err := tmp.Seek(0, 0); err != nil {
+		s.Logger.Error("unable to seek back to 0", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected())
 		return
 	}
 
 	meta := Metadata{
 		Version:     1,
-		Filename:    header.Filename,
-		ContentType: http.DetectContentType(fileHeader),
-		Size:        fmt.Sprint(header.Size),
+		Filename:    p.FileName(),
+		ContentType: http.DetectContentType(sniff),
+		Size:        fmt.Sprint(length),
 	}
 
 	buf, err := json.Marshal(meta)
@@ -159,7 +191,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.ErrUnexpected())
 	case nil:
 		defer writer.Close()
-		io.Copy(writer, file)
+		io.Copy(writer, tmp)
 		response.WriteResponse(w, r, fmt.Sprintf("%s/%s", s.BaseURL, id))
 	}
 }
