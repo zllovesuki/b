@@ -9,12 +9,14 @@ import (
 	"github.com/zllovesuki/b/backend"
 	"github.com/zllovesuki/b/box"
 	"github.com/zllovesuki/b/fast"
+	"github.com/zllovesuki/b/service"
 	"github.com/zllovesuki/b/service/file"
 	"github.com/zllovesuki/b/service/index"
 	"github.com/zllovesuki/b/service/link"
 	"github.com/zllovesuki/b/service/text"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/docgen"
 	"go.uber.org/zap"
 )
@@ -79,6 +81,12 @@ func main() {
 	}
 
 	r := chi.NewRouter()
+
+	r.Use(middleware.Heartbeat("/healthz"))
+	r.Use(middleware.RequestID)
+	r.Use(service.Recovery(logger))
+	r.Mount("/debug", middleware.Profiler())
+
 	r.Mount("/", index.Route())
 	l.Route(r)
 	t.Route(r)
