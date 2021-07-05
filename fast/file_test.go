@@ -144,11 +144,33 @@ func TestFileFastBackend(t *testing.T) {
 		_, err = io.Copy(w, dep.file)
 		require.NoError(t, err)
 
+		_, err = dep.file.Seek(0, 0)
+		require.NoError(t, err)
+
 		<-time.After(ttl)
 
 		w, err = dep.f.SaveTTL(context.Background(), key, ttl*2)
 		require.NoError(t, err)
 		defer w.Close()
+
+		src, err := ioutil.ReadAll(dep.file)
+		require.NoError(t, err)
+
+		_, err = dep.file.Seek(0, 0)
+		require.NoError(t, err)
+
+		_, err = io.Copy(w, dep.file)
+		require.NoError(t, err)
+
+		<-time.After(ttl)
+
+		r, err := dep.f.Retrieve(context.Background(), key)
+		require.NoError(t, err)
+		defer r.Close()
+		saved, err := ioutil.ReadAll(r)
+		require.NoError(t, err)
+
+		require.Equal(t, src, saved)
 	})
 
 	t.Run("get outside of ttl should not found", func(t *testing.T) {
