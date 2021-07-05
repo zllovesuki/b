@@ -12,11 +12,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/require"
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
 	"github.com/zllovesuki/b/service"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
 

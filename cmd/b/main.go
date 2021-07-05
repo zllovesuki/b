@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -12,11 +14,16 @@ import (
 	"github.com/zllovesuki/b/service/link"
 	"github.com/zllovesuki/b/service/text"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/docgen"
 	"go.uber.org/zap"
 )
 
+var routes = flag.Bool("routes", false, "Generate router documentation")
+
 func main() {
+	flag.Parse()
+
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatalf("unable to get logger: %v", err)
@@ -76,6 +83,11 @@ func main() {
 	l.Route(r)
 	t.Route(r)
 	f.Route(r)
+
+	if *routes {
+		fmt.Println(docgen.JSONRoutesDoc(r))
+		return
+	}
 
 	http.ListenAndServe(":3000", r)
 }

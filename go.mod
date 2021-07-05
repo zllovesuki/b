@@ -4,7 +4,8 @@ go 1.16
 
 require (
 	github.com/buger/jsonparser v1.1.1
-	github.com/go-chi/chi v1.5.4
+	github.com/go-chi/chi/v5 v5.0.3
+	github.com/go-chi/docgen v1.2.0
 	github.com/go-redis/redis/v8 v8.11.0
 	github.com/golang/mock v1.6.0
 	github.com/pkg/errors v0.9.1
