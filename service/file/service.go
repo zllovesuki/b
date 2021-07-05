@@ -11,6 +11,7 @@ import (
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
+	"github.com/zllovesuki/b/service"
 
 	"github.com/go-chi/chi"
 	"github.com/pkg/errors"
@@ -192,16 +193,18 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	case nil:
 		defer writer.Close()
 		io.Copy(writer, tmp)
-		response.WriteResponse(w, r, fmt.Sprintf("%s/%s", s.BaseURL, id))
+		response.WriteResponse(w, r, service.Ret(s.BaseURL, filePrefix, id))
 	}
 }
 
 // Route returns a mountable route for file service
-func (s *Service) Route() http.Handler {
-	r := chi.NewRouter()
+func (s *Service) Route(r *chi.Mux) http.Handler {
+	if r == nil {
+		r = chi.NewRouter()
+	}
 
-	r.Post("/{id:[a-zA-z0-9]+}", s.saveFile)
-	r.Get("/{id:[a-zA-Z0-9]+}", s.retrieveFile)
+	r.Post(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.saveFile)
+	r.Get(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.retrieveFile)
 
 	return r
 }

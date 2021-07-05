@@ -51,7 +51,7 @@
                     <div class="form-group">
                         <label class="form-label" for="files-url">URL</label>
                         <div class="input-group">
-                            <span class="input-group-addon">/f/</span>
+                            <span class="input-group-addon">/f-</span>
                             <input
                                 id="files-url"
                                 class="form-input"
@@ -86,7 +86,7 @@
                     <div class="form-group">
                         <label class="form-label" for="links-url">URL</label>
                         <div class="input-group">
-                            <span class="input-group-addon">/l/</span>
+                            <span class="input-group-addon">/l-</span>
                             <input
                                 id="links-url"
                                 class="form-input"
@@ -124,7 +124,7 @@
                     <div class="form-group">
                         <label class="form-label" for="texts-url">URL</label>
                         <div class="input-group">
-                            <span class="input-group-addon">/t/</span>
+                            <span class="input-group-addon">/t-</span>
                             <input
                                 id="texts-url"
                                 class="form-input"
@@ -250,7 +250,7 @@
                 setTimeout(() => {
                     modal.self.classList.remove("active");
                     modal.input.value = "";
-                }, 5000);
+                }, 2500);
             };
             modal.input.onclick = (e) => {
                 e.preventDefault();
@@ -364,7 +364,7 @@
                         const fd = new FormData();
                         fd.append("file", file);
                         const id = urlInput.value;
-                        const url = `${baseUrl}f/${id}`;
+                        const url = `${baseUrl}f-${id}`;
 
                         let status;
                         fetch(url, {
@@ -391,7 +391,7 @@
                         const id = urlInput.value;
                         const forward = inputs.links[1].value;
 
-                        const url = `${baseUrl}l/${id}`;
+                        const url = `${baseUrl}l-${id}`;
                         let status;
                         fetch(url, {
                             method: "POST",
@@ -419,7 +419,7 @@
                         const contents = inputs.texts[1].value;
                         // const highlight = inputs.texts[2].checked;
 
-                        const url = `${baseUrl}t/${id}`;
+                        const url = `${baseUrl}t-${id}`;
                         let status;
                         fetch(url, {
                             method: "POST",

@@ -39,7 +39,7 @@ func main() {
 	}
 
 	l, err := link.NewService(link.Options{
-		BaseURL: "http://127.0.0.1:3000/l",
+		BaseURL: "http://127.0.0.1:3000",
 		Backend: redis,
 		Logger:  logger,
 	})
@@ -48,7 +48,7 @@ func main() {
 	}
 
 	t, err := text.NewService(text.Options{
-		BaseURL: "http://127.0.0.1:3000/t",
+		BaseURL: "http://127.0.0.1:3000",
 		Backend: redis,
 		Logger:  logger,
 	})
@@ -62,7 +62,7 @@ func main() {
 	}
 
 	f, err := file.NewService(file.Options{
-		BaseURL:         "http://127.0.0.1:3000/f",
+		BaseURL:         "http://127.0.0.1:3000",
 		MetadataBackend: redis,
 		FileBackend:     s,
 		Logger:          logger,
@@ -73,9 +73,9 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Mount("/", index.Route())
-	r.Mount("/l", l.Route())
-	r.Mount("/t", t.Route())
-	r.Mount("/f", f.Route())
+	l.Route(r)
+	t.Route(r)
+	f.Route(r)
 
 	http.ListenAndServe(":3000", r)
 }

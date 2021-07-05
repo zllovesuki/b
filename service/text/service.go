@@ -7,6 +7,7 @@ import (
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
+	"github.com/zllovesuki/b/service"
 
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi"
@@ -80,7 +81,7 @@ func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 	case app.ErrConflict:
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 	case nil:
-		response.WriteResponse(w, r, fmt.Sprintf("%s/%s", s.BaseURL, id))
+		response.WriteResponse(w, r, service.Ret(s.BaseURL, prefix, id))
 	}
 }
 
@@ -103,11 +104,13 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 }
 
 // Route returns a mountable route for text service
-func (s *Service) Route() http.Handler {
-	r := chi.NewRouter()
+func (s *Service) Route(r *chi.Mux) http.Handler {
+	if r == nil {
+		r = chi.NewRouter()
+	}
 
-	r.Post("/{id:[a-zA-z0-9]+}", s.saveText)
-	r.Get("/{id:[a-zA-Z0-9]+}", s.retrieveText)
+	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveText)
+	r.Get(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.retrieveText)
 
 	return r
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
+	"github.com/zllovesuki/b/service"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -79,7 +80,7 @@ func TestGetFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(filePrefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
@@ -90,7 +91,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), filePrefix+id).
 			Return(dep.testFile, nil)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -104,14 +105,14 @@ func TestGetFile(t *testing.T) {
 
 		id := "hello"
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(filePrefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
 			Retrieve(gomock.Any(), metaPrefix+id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -124,14 +125,14 @@ func TestGetFile(t *testing.T) {
 
 		id := "hello"
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(filePrefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
 			Retrieve(gomock.Any(), metaPrefix+id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -150,7 +151,7 @@ func TestGetFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(filePrefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
@@ -161,7 +162,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), filePrefix+id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -180,7 +181,7 @@ func TestGetFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(filePrefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
@@ -191,7 +192,7 @@ func TestGetFile(t *testing.T) {
 			Retrieve(gomock.Any(), filePrefix+id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -203,14 +204,14 @@ func TestGetFile(t *testing.T) {
 
 		id := "wqrewr"
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(filePrefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockMetadataBackend.EXPECT().
 			Retrieve(gomock.Any(), metaPrefix+id).
 			Return([]byte("hi"), nil)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -263,7 +264,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, body)
+		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -277,7 +278,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), filePrefix+id).
 			Return(mockRecorder, nil)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -285,7 +286,7 @@ func TestSaveFile(t *testing.T) {
 		var ret response.V1Response
 		err = json.NewDecoder(resp.Body).Decode(&ret)
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%s/%s", dep.baseURL, id), ret.Result)
+		require.Equal(t, service.Ret(dep.baseURL, filePrefix, id), ret.Result)
 		require.Equal(t, length, int64(len(mockRecorder.buf)))
 	})
 
@@ -305,7 +306,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, body)
+		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -313,7 +314,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), metaPrefix+id, buf).
 			Return(app.ErrConflict)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -335,7 +336,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, body)
+		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -343,7 +344,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), metaPrefix+id, buf).
 			Return(fmt.Errorf("error"))
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -365,7 +366,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, body)
+		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -377,7 +378,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), filePrefix+id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -399,7 +400,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, body)
+		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -411,7 +412,7 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), filePrefix+id).
 			Return(nil, app.ErrConflict)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)

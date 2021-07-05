@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
+	"github.com/zllovesuki/b/service"
 	"go.uber.org/zap/zaptest"
 
 	"github.com/golang/mock/gomock"
@@ -58,14 +59,14 @@ func TestGetLink(t *testing.T) {
 		id := "hello"
 		ret := "https://google.com"
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(prefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
 			Retrieve(gomock.Any(), prefix+id).
 			Return([]byte(ret), nil)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -79,14 +80,14 @@ func TestGetLink(t *testing.T) {
 
 		id := "hello"
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(prefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
 			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -99,14 +100,14 @@ func TestGetLink(t *testing.T) {
 
 		id := "hello"
 
-		r, err := http.NewRequest("GET", "/"+id, nil)
+		r, err := http.NewRequest("GET", service.Prefix(prefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
 			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -127,14 +128,14 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, bytes.NewBuffer(body))
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
 			Save(gomock.Any(), prefix+id, []byte(req.URL)).
 			Return(nil)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -142,7 +143,7 @@ func TestSaveLink(t *testing.T) {
 		var ret response.V1Response
 		err = json.NewDecoder(resp.Body).Decode(&ret)
 		require.NoError(t, err)
-		require.Equal(t, fmt.Sprintf("%s/%s", dep.baseURL, id), ret.Result)
+		require.Equal(t, service.Ret(dep.baseURL, prefix, id), ret.Result)
 	})
 
 	t.Run("bad url should return bad request", func(t *testing.T) {
@@ -157,10 +158,10 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, bytes.NewBuffer(body))
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -178,14 +179,14 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, bytes.NewBuffer(body))
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
 			Save(gomock.Any(), prefix+id, []byte(req.URL)).
 			Return(app.ErrConflict)
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -203,14 +204,14 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", "/"+id, bytes.NewBuffer(body))
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
 			Save(gomock.Any(), prefix+id, []byte(req.URL)).
 			Return(fmt.Errorf("error"))
 
-		dep.service.Route().ServeHTTP(dep.recorder, r)
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
