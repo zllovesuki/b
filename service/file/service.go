@@ -73,7 +73,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	default:
 		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file metadata"))
 		return
 	case app.ErrNotFound:
 		w.WriteHeader(http.StatusNotFound)
@@ -86,7 +86,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(m, &meta)
 	if err != nil {
 		s.Logger.Error("unable to decode file metadata", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Invalid file metadata"))
 		return
 	}
 
@@ -94,10 +94,10 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	default:
 		s.Logger.Error("unable to retrieve from file backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file"))
 	case app.ErrNotFound:
 		s.Logger.Error("file backend returned not found when metadata exists", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata"))
 	case nil:
 		defer fileReader.Close()
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
@@ -174,7 +174,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	default:
 		s.Logger.Error("unable to save to metadata backend", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file metadata"))
 		return
 	case app.ErrConflict:
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
@@ -186,7 +186,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	default:
 		s.Logger.Error("unable to save to file backend", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 	case app.ErrConflict:
 		s.Logger.Error("conflicting identifier in file backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected())

@@ -20,14 +20,20 @@ type Options struct {
 
 type Service struct {
 	Options
+	indexPath string
 }
 
 func NewService(option Options) (*Service, error) {
 	if err := option.validate(); err != nil {
 		return nil, err
 	}
+	indexPath := option.Asset.Get("/index.html")
+	if indexPath == "" {
+		return nil, errors.New("unable to extract index.html")
+	}
 	return &Service{
-		Options: option,
+		Options:   option,
+		indexPath: indexPath,
 	}, nil
 }
 
@@ -42,22 +48,16 @@ func (o *Options) validate() error {
 }
 
 func (s *Service) index(w http.ResponseWriter, r *http.Request) {
-	p := s.Asset.Get("/index.html")
-	if p == "" {
-		s.Logger.Error("unable to obtain index.html")
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "unexpected error")
-		return
-	}
-
-	file, err := os.Open(p)
+	file, err := os.Open(s.indexPath)
 	if err != nil {
-		s.Logger.Error("unable to open index.html", zap.String("path", p), zap.Error(err))
+		s.Logger.Error("unable to open index.html", zap.String("path", s.indexPath), zap.Error(err))
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "unexpected error")
 		return
 	}
+	defer file.Close()
 
+	w.Header().Set("Content-Type", "text/html")
 	io.Copy(w, file)
 }
 

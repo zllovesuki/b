@@ -77,7 +77,7 @@ func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	default:
 		s.Logger.Error("unable to save to backend", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save text paste"))
 	case app.ErrConflict:
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 	case nil:
@@ -93,9 +93,10 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	switch err {
 	default:
 		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected())
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve text paste"))
 	case app.ErrNotFound:
 		w.WriteHeader(http.StatusNotFound)
+		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(w, "text not found")
 	case nil:
 		w.Header().Set("Content-Type", "text/plain")
