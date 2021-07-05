@@ -63,7 +63,8 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 		}
 	}
 
-	file, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE, 0600)
+	// overwrite file if ttl exceeded, or just a new file in general
+	file, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot open file")
 	}
@@ -80,18 +81,12 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 
 	file, err := os.OpenFile(p, os.O_RDONLY, 0600)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, app.ErrNotFound
+		}
 		return nil, errors.Wrap(err, "cannot open file")
 	}
 
-	_, err = file.Stat()
-	if errors.Is(err, os.ErrNotExist) {
-		return nil, app.ErrNotFound
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot stat file")
-	}
-
-	// read expiration data back
 	ex, err := ttlExceeded(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking ttl of the file")
