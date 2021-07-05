@@ -15,6 +15,7 @@ type RedisBackend struct {
 }
 
 var _ app.Backend = &RedisBackend{}
+var _ app.Removable = &RedisBackend{}
 
 // NewBasicRedisBackend returns a redis backed storage for the application
 func NewBasicRedisBackend(url string) (*RedisBackend, error) {
@@ -58,4 +59,8 @@ func (b *RedisBackend) Retrieve(c context.Context, identifier string) ([]byte, e
 	case nil:
 		return ret, nil
 	}
+}
+
+func (b *RedisBackend) Delete(c context.Context, identifier string) error {
+	return b.cli.Del(c, identifier).Err()
 }

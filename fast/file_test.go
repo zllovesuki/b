@@ -170,5 +170,24 @@ func TestFileFastBackend(t *testing.T) {
 		_, err = dep.f.Retrieve(context.Background(), key)
 		require.ErrorIs(t, err, app.ErrNotFound)
 	})
+}
 
+func TestFileDelete(t *testing.T) {
+	dep, clean := getFixtures(t)
+	defer clean()
+
+	key := "happy"
+
+	w, err := dep.f.Save(context.Background(), key)
+	require.NoError(t, err)
+
+	_, err = io.Copy(w, dep.file)
+	require.NoError(t, err)
+	w.Close()
+
+	err = dep.f.Delete(context.Background(), key)
+	require.NoError(t, err)
+
+	_, err = dep.f.Retrieve(context.Background(), key)
+	require.ErrorIs(t, err, app.ErrNotFound)
 }

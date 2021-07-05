@@ -18,6 +18,7 @@ type FileFastBackend struct {
 }
 
 var _ app.FastBackend = &FileFastBackend{}
+var _ app.Removable = &FileFastBackend{}
 
 func NewFileFastBackend(dataDir string) (*FileFastBackend, error) {
 	if dataDir == "" {
@@ -99,6 +100,12 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 	}
 
 	return file, nil
+}
+
+func (f *FileFastBackend) Delete(c context.Context, identifier string) error {
+	p := filepath.Join(f.dataDir, identifier)
+
+	return os.Remove(p)
 }
 
 // TODO(zllovesuki): formalized the on-disk format as a specification

@@ -119,3 +119,22 @@ func TestRedisBackend(t *testing.T) {
 		require.Equal(t, buf, ret)
 	})
 }
+
+func TestRedisDelete(t *testing.T) {
+	b, cleanup := getFixtures(t)
+	defer cleanup()
+
+	key := "hello"
+	buf := make([]byte, 8)
+	_, err := rand.Read(buf)
+	require.NoError(t, err)
+
+	err = b.Save(context.Background(), key, buf)
+	require.NoError(t, err)
+
+	err = b.Delete(context.Background(), key)
+	require.NoError(t, err)
+
+	_, err = b.Retrieve(context.Background(), key)
+	require.ErrorIs(t, err, app.ErrNotFound)
+}

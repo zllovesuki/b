@@ -1,6 +1,6 @@
 package app
 
-//go:generate mockgen -destination=backend_mocks.go -package=app github.com/zllovesuki/b/app Backend,FastBackend
+//go:generate mockgen -destination=backend_mocks.go -package=app github.com/zllovesuki/b/app Backend,FastBackend,Removable,RemovableBackend,RemovableFastBackend
 
 import (
 	"context"
@@ -31,4 +31,19 @@ type FastBackend interface {
 	Save(c context.Context, identifier string) (io.WriteCloser, error)
 	SaveTTL(c context.Context, identifier string, ttl time.Duration) (io.WriteCloser, error)
 	Retrieve(c context.Context, identifier string) (io.ReadCloser, error)
+}
+
+// Removable is used to remove underlying resources, usually in internal tools
+type Removable interface {
+	Delete(c context.Context, identifier string) error
+}
+
+type RemovableBackend interface {
+	Backend
+	Removable
+}
+
+type RemovableFastBackend interface {
+	FastBackend
+	Removable
 }
