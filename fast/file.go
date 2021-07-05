@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/djherbis/times"
 	"github.com/pkg/errors"
 	"github.com/zllovesuki/b/app"
 )
@@ -55,14 +54,7 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 			return nil, errors.Wrap(err, "cannot open file to check for expiration")
 		}
 		defer f.Close()
-		ttl, err := getTTL(f)
-		if err != nil {
-			return nil, errors.Wrap(err, "error reading file to check for expiration")
-		}
-		if ttl == 0 {
-			return nil, app.ErrConflict
-		}
-		ex, err := ttlExceeded(f, ttl)
+		ex, err := ttlExceeded(f)
 		if err != nil {
 			return nil, errors.Wrap(err, "error checking ttl of the file")
 		}
@@ -76,11 +68,8 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 		return nil, errors.Wrap(err, "cannot open file")
 	}
 
-	// save expiration data at the head
-	exp := make([]byte, 8)
-	binary.LittleEndian.PutUint64(exp, uint64(ttl))
-	if _, err := file.Write(exp); err != nil {
-		return nil, errors.Wrap(err, "cannot write expiration data")
+	if err := writeTTL(file, ttl); err != nil {
+		return nil, err
 	}
 
 	return file, nil
@@ -103,16 +92,7 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 	}
 
 	// read expiration data back
-	ttl, err := getTTL(file)
-	if err != nil {
-		return nil, errors.Wrap(err, "error reading file to check for expiration")
-	}
-
-	if ttl == 0 {
-		return file, nil
-	}
-
-	ex, err := ttlExceeded(file, ttl)
+	ex, err := ttlExceeded(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking ttl of the file")
 	}
@@ -126,26 +106,40 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 	return file, nil
 }
 
-func getTTL(f *os.File) (int64, error) {
-	exp := make([]byte, 8)
-	if _, err := f.Read(exp); err != nil {
-		return 0, errors.Wrap(err, "cannot read expiration data")
+// TODO(zllovesuki): formalized the on-disk format as a specification
+func writeTTL(f *os.File, ttl time.Duration) error {
+	head := make([]byte, 15+8) // 15 bytes for when it was created, 8 bytes for ttl
+	now, err := time.Now().UTC().MarshalBinary()
+	if err != nil {
+		return errors.Wrap(err, "error marshalling time into binary")
 	}
-	return int64(binary.LittleEndian.Uint64(exp)), nil
+
+	copy(head[:15], now)
+	binary.LittleEndian.PutUint64(head[15:23], uint64(ttl))
+
+	if _, err := f.Write(head); err != nil {
+		return errors.Wrap(err, "cannot write expiration data")
+	}
+
+	return nil
 }
 
-func ttlExceeded(f *os.File, ttl int64) (bool, error) {
-	t, err := times.StatFile(f)
-	if err != nil {
-		return false, errors.Wrap(err, "unable to get file metadata")
+func ttlExceeded(f *os.File) (bool, error) {
+	head := make([]byte, 15+8)
+	if _, err := f.Read(head); err != nil {
+		return false, errors.Wrap(err, "cannot read expiration data")
+	}
+
+	ttl := int64(binary.LittleEndian.Uint64(head[15:23]))
+
+	if ttl == 0 {
+		return false, nil
 	}
 
 	var ref time.Time
-	if t.HasBirthTime() {
-		ref = t.BirthTime()
-	} else if t.HasChangeTime() {
-		ref = t.ChangeTime()
+	if err := ref.UnmarshalBinary(head[:15]); err != nil {
+		return false, errors.Wrap(err, "error unmarshalling binary into time")
 	}
 
-	return !ref.IsZero() && time.Now().After(ref.Add(time.Duration(ttl))), nil
+	return time.Now().After(ref.Add(time.Duration(ttl))), nil
 }
