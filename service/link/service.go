@@ -73,32 +73,34 @@ func (s *Service) saveLink(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.Backend.Save(r.Context(), prefix+id, []byte(req.URL))
-	switch err {
-	default:
+	if errors.Is(err, app.ErrConflict) {
+		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		return
+	} else if err != nil {
 		s.Logger.Error("unable to save to backend", zap.Error(err))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save link"))
-	case app.ErrConflict:
-		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
-	case nil:
-		response.WriteResponse(w, r, service.Ret(s.BaseURL, prefix, id))
+		return
 	}
+
+	response.WriteResponse(w, r, service.Ret(s.BaseURL, prefix, id))
 }
 
 func (s *Service) retrieveLink(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	long, err := s.Backend.Retrieve(r.Context(), prefix+id)
-	switch err {
-	default:
-		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve link"))
-	case app.ErrNotFound, app.ErrExpired:
+	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
 		w.WriteHeader(http.StatusNotFound)
 		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(w, "link not found")
-	case nil:
-		http.Redirect(w, r, string(long), http.StatusFound)
+		return
+	} else if err != nil {
+		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve link"))
+		return
 	}
+
+	http.Redirect(w, r, string(long), http.StatusFound)
 }
 
 // Route returns a mountable route for URL service

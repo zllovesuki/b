@@ -74,15 +74,16 @@ func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.Backend.Save(r.Context(), prefix+id, []byte(ret))
-	switch err {
-	default:
+	if errors.Is(err, app.ErrConflict) {
+		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		return
+	} else if err != nil {
 		s.Logger.Error("unable to save to backend", zap.Error(err))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save text paste"))
-	case app.ErrConflict:
-		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
-	case nil:
-		response.WriteResponse(w, r, service.Ret(s.BaseURL, prefix, id))
+		return
 	}
+
+	response.WriteResponse(w, r, service.Ret(s.BaseURL, prefix, id))
 }
 
 func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
@@ -90,18 +91,18 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 
 	// TODO(zllovesuki): Consider using FastBackend
 	text, err := s.Backend.Retrieve(r.Context(), prefix+id)
-	switch err {
-	default:
-		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve text paste"))
-	case app.ErrNotFound, app.ErrExpired:
+	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
 		w.WriteHeader(http.StatusNotFound)
 		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(w, "text not found")
-	case nil:
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(string(text)))
+	} else if err != nil {
+		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve text paste"))
+		return
 	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write(text)
 }
 
 // Route returns a mountable route for text service

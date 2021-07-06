@@ -70,16 +70,14 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	m, err := s.MetadataBackend.Retrieve(r.Context(), metaPrefix+id)
-	switch err {
-	default:
-		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file metadata"))
-		return
-	case app.ErrNotFound, app.ErrExpired:
+	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "file not found")
 		return
-	case nil:
+	} else if err != nil {
+		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file metadata"))
+		return
 	}
 
 	var meta Metadata
@@ -91,20 +89,21 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileReader, err := s.FileBackend.Retrieve(r.Context(), filePrefix+id)
-	switch err {
-	default:
-		s.Logger.Error("unable to retrieve from file backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file"))
-	case app.ErrNotFound, app.ErrExpired:
+	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
 		s.Logger.Error("file backend returned not found when metadata exists", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata"))
-	case nil:
-		defer fileReader.Close()
-		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
-		w.Header().Set("Content-Type", meta.ContentType)
-		w.Header().Set("Content-Length", meta.Size)
-		io.Copy(w, fileReader)
+		return
+	} else if err != nil {
+		s.Logger.Error("unable to retrieve from file backend", zap.Error(err), zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file"))
+		return
 	}
+
+	defer fileReader.Close()
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
+	w.Header().Set("Content-Type", meta.ContentType)
+	w.Header().Set("Content-Length", meta.Size)
+	io.Copy(w, fileReader)
 }
 
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
@@ -171,30 +170,29 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = s.MetadataBackend.Save(r.Context(), metaPrefix+id, buf)
-	switch err {
-	default:
+	if errors.Is(err, app.ErrConflict) {
+		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		return
+	} else if err != nil {
 		s.Logger.Error("unable to save to metadata backend", zap.Error(err))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file metadata"))
 		return
-	case app.ErrConflict:
-		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
-		return
-	case nil:
 	}
 
 	writer, err := s.FileBackend.Save(r.Context(), filePrefix+id)
-	switch err {
-	default:
-		s.Logger.Error("unable to save to file backend", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
-	case app.ErrConflict:
+	if errors.Is(err, app.ErrConflict) {
 		s.Logger.Error("conflicting identifier in file backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected())
-	case nil:
-		defer writer.Close()
-		io.Copy(writer, tmp)
-		response.WriteResponse(w, r, service.Ret(s.BaseURL, filePrefix, id))
+		return
+	} else if err != nil {
+		s.Logger.Error("unable to save to file backend", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
+		return
 	}
+
+	defer writer.Close()
+	io.Copy(writer, tmp)
+	response.WriteResponse(w, r, service.Ret(s.BaseURL, filePrefix, id))
 }
 
 // Route returns a mountable route for file service
