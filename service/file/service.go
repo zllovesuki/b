@@ -74,7 +74,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "file not found")
 		return
 	} else if err != nil {
-		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err))
+		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file metadata"))
 		return
 	}
@@ -119,7 +119,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 		return
 	} else if !errors.Is(err, app.ErrNotFound) {
-		s.Logger.Error("unable to check metadata backend prior to processing", zap.Error(err))
+		s.Logger.Error("unable to check metadata backend prior to processing", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 		return
 	}
@@ -150,7 +150,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 		return
 	} else if err != nil {
-		s.Logger.Error("unable to save to file backend", zap.Error(err))
+		s.Logger.Error("unable to save to file backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 		return
 	}
