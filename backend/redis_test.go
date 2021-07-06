@@ -10,7 +10,7 @@ import (
 	"github.com/zllovesuki/b/app"
 )
 
-func getFixtures(t *testing.T) (*RedisBackend, func()) {
+func getRedisFixtures(t *testing.T) (*RedisBackend, func()) {
 	b, err := NewBasicRedisBackend("127.0.0.1:6379")
 	require.NoError(t, err)
 
@@ -34,7 +34,7 @@ func getFixtures(t *testing.T) (*RedisBackend, func()) {
 
 func TestRedisBackend(t *testing.T) {
 	t.Run("save should return no error", func(t *testing.T) {
-		b, cleanup := getFixtures(t)
+		b, cleanup := getRedisFixtures(t)
 		defer cleanup()
 
 		err := b.Save(context.Background(), "hi", []byte("h"))
@@ -42,7 +42,7 @@ func TestRedisBackend(t *testing.T) {
 	})
 
 	t.Run("save should return error on conflict", func(t *testing.T) {
-		b, cleanup := getFixtures(t)
+		b, cleanup := getRedisFixtures(t)
 		defer cleanup()
 
 		key := "hi"
@@ -51,11 +51,11 @@ func TestRedisBackend(t *testing.T) {
 		require.NoError(t, err)
 
 		err = b.Save(context.Background(), key, []byte("h"))
-		require.ErrorIs(t, app.ErrConflict, err)
+		require.ErrorIs(t, err, app.ErrConflict)
 	})
 
 	t.Run("save ttl should work and expire when retrieve", func(t *testing.T) {
-		b, cleanup := getFixtures(t)
+		b, cleanup := getRedisFixtures(t)
 		defer cleanup()
 
 		key := "hi"
@@ -67,12 +67,12 @@ func TestRedisBackend(t *testing.T) {
 		<-time.After(wait)
 
 		ret, err := b.Retrieve(context.Background(), key)
-		require.ErrorIs(t, app.ErrNotFound, err)
+		require.ErrorIs(t, err, app.ErrNotFound)
 		require.Nil(t, ret)
 	})
 
 	t.Run("save ttl should return conflict if within ttl", func(t *testing.T) {
-		b, cleanup := getFixtures(t)
+		b, cleanup := getRedisFixtures(t)
 		defer cleanup()
 
 		key := "hi"
@@ -82,11 +82,11 @@ func TestRedisBackend(t *testing.T) {
 		require.NoError(t, err)
 
 		err = b.Save(context.Background(), key, []byte("h"))
-		require.ErrorIs(t, app.ErrConflict, err)
+		require.ErrorIs(t, err, app.ErrConflict)
 	})
 
 	t.Run("retrieve should return what we saved", func(t *testing.T) {
-		b, cleanup := getFixtures(t)
+		b, cleanup := getRedisFixtures(t)
 		defer cleanup()
 
 		key := "hello"
@@ -103,7 +103,7 @@ func TestRedisBackend(t *testing.T) {
 	})
 
 	t.Run("retrieve should return what we saved within expiration", func(t *testing.T) {
-		b, cleanup := getFixtures(t)
+		b, cleanup := getRedisFixtures(t)
 		defer cleanup()
 
 		key := "hello"
@@ -121,7 +121,7 @@ func TestRedisBackend(t *testing.T) {
 }
 
 func TestRedisDelete(t *testing.T) {
-	b, cleanup := getFixtures(t)
+	b, cleanup := getRedisFixtures(t)
 	defer cleanup()
 
 	key := "hello"
