@@ -101,7 +101,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
 	w.Header().Set("Content-Type", meta.ContentType)
 	w.Header().Set("Content-Length", meta.Size)
-	io.Copy(w, fileReader)
+	io.Copy(w, app.NewCtxReader(r.Context(), fileReader))
 }
 
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +145,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer writer.Close()
 
-	length, err := io.Copy(writer, file)
+	length, err := io.Copy(writer, app.NewCtxReader(r.Context(), file))
 	if err != nil {
 		s.Logger.Error("unable to write to file backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
