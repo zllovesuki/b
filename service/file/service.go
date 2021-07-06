@@ -12,6 +12,7 @@ import (
 	"github.com/zllovesuki/b/service"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -107,20 +108,19 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	_, err := s.MetadataBackend.Retrieve(r.Context(), metaPrefix+id)
+	form, err := r.MultipartReader()
+	if err != nil {
+		response.WriteError(w, r, response.ErrBadRequest().AddMessages("request is not multipart"))
+		return
+	}
+
+	_, err = s.MetadataBackend.Retrieve(r.Context(), metaPrefix+id)
 	if err == nil || errors.Is(err, app.ErrExpired) {
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 		return
 	} else if !errors.Is(err, app.ErrNotFound) {
 		s.Logger.Error("unable to check metadata backend prior to processing", zap.Error(err))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
-		return
-	}
-
-	form, err := r.MultipartReader()
-	if err != nil {
-		s.Logger.Error("unable to open a multipart reader", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
 		return
 	}
 
@@ -196,7 +196,10 @@ func (s *Service) Route(r *chi.Mux) http.Handler {
 		r = chi.NewRouter()
 	}
 
-	r.Post(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.saveFile)
+	nocache := r.Group(nil)
+	nocache.Use(middleware.NoCache)
+	nocache.Post(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.saveFile)
+
 	r.Get(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.retrieveFile)
 
 	return r

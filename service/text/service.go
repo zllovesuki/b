@@ -11,6 +11,7 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -111,7 +112,10 @@ func (s *Service) Route(r *chi.Mux) http.Handler {
 		r = chi.NewRouter()
 	}
 
-	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveText)
+	nocache := r.Group(nil)
+	nocache.Use(middleware.NoCache)
+	nocache.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveText)
+
 	r.Get(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.retrieveText)
 
 	return r
