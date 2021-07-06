@@ -272,6 +272,10 @@ func TestSaveFile(t *testing.T) {
 		mockRecorder := &mockWriter{buf: make([]byte, 0)}
 
 		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), metaPrefix+id).
+			Return(nil, app.ErrNotFound)
+
+		dep.mockMetadataBackend.EXPECT().
 			Save(gomock.Any(), metaPrefix+id, buf).
 			Return(nil)
 
@@ -302,15 +306,18 @@ func TestSaveFile(t *testing.T) {
 			ContentType: "image/jpeg",
 		}
 
-		body, writer, _ := getMultipart(t, dep.testFile, meta)
+		body, writer, length := getMultipart(t, dep.testFile, meta)
+		meta.Size = fmt.Sprint(length)
+		buf, err := json.Marshal(&meta)
+		require.NoError(t, err)
 
 		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
-		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), filePrefix+id).
-			Return(nil, app.ErrConflict)
+		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), metaPrefix+id).
+			Return(buf, nil)
 
 		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
@@ -335,8 +342,8 @@ func TestSaveFile(t *testing.T) {
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
-		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), filePrefix+id).
+		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), metaPrefix+id).
 			Return(nil, fmt.Errorf("error"))
 
 		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
@@ -362,6 +369,10 @@ func TestSaveFile(t *testing.T) {
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
+		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), metaPrefix+id).
+			Return(nil, app.ErrNotFound)
+
 		dep.mockFileBackend.EXPECT().
 			Save(gomock.Any(), filePrefix+id).
 			Return(nil, fmt.Errorf("error"))
@@ -372,7 +383,7 @@ func TestSaveFile(t *testing.T) {
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})
 
-	t.Run("conflict in meta backend", func(t *testing.T) {
+	t.Run("conflict in meta backend when checking reported not found", func(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
 
@@ -385,7 +396,7 @@ func TestSaveFile(t *testing.T) {
 
 		body, writer, length := getMultipart(t, dep.testFile, meta)
 		meta.Size = fmt.Sprint(length)
-		buf, err := json.Marshal(meta)
+		buf, err := json.Marshal(&meta)
 		require.NoError(t, err)
 
 		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
@@ -393,6 +404,10 @@ func TestSaveFile(t *testing.T) {
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
 		mockRecorder := &mockWriter{buf: make([]byte, 0)}
+
+		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), metaPrefix+id).
+			Return(nil, app.ErrNotFound)
 
 		dep.mockFileBackend.EXPECT().
 			Save(gomock.Any(), filePrefix+id).

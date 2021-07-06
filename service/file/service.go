@@ -107,6 +107,16 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
+	_, err := s.MetadataBackend.Retrieve(r.Context(), metaPrefix+id)
+	if err == nil || errors.Is(err, app.ErrExpired) {
+		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		return
+	} else if !errors.Is(err, app.ErrNotFound) {
+		s.Logger.Error("unable to check metadata backend prior to processing", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
+		return
+	}
+
 	form, err := r.MultipartReader()
 	if err != nil {
 		s.Logger.Error("unable to open a multipart reader", zap.Error(err))
@@ -136,7 +146,8 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 
 	writer, err := s.FileBackend.Save(r.Context(), filePrefix+id)
 	if errors.Is(err, app.ErrConflict) {
-		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		s.Logger.Error("metadata backend reported no conflict when checking but reported conflict on save", zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 		return
 	} else if err != nil {
 		s.Logger.Error("unable to save to file backend", zap.Error(err))
