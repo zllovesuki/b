@@ -302,18 +302,15 @@ func TestSaveFile(t *testing.T) {
 			ContentType: "image/jpeg",
 		}
 
-		body, writer, length := getMultipart(t, dep.testFile, meta)
-		meta.Size = fmt.Sprint(length)
-		buf, err := json.Marshal(meta)
-		require.NoError(t, err)
+		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
 		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
-		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), metaPrefix+id, buf).
-			Return(app.ErrConflict)
+		dep.mockFileBackend.EXPECT().
+			Save(gomock.Any(), filePrefix+id).
+			Return(nil, app.ErrConflict)
 
 		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
@@ -332,18 +329,15 @@ func TestSaveFile(t *testing.T) {
 			ContentType: "image/jpeg",
 		}
 
-		body, writer, length := getMultipart(t, dep.testFile, meta)
-		meta.Size = fmt.Sprint(length)
-		buf, err := json.Marshal(meta)
-		require.NoError(t, err)
+		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
 		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
-		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), metaPrefix+id, buf).
-			Return(fmt.Errorf("error"))
+		dep.mockFileBackend.EXPECT().
+			Save(gomock.Any(), filePrefix+id).
+			Return(nil, fmt.Errorf("error"))
 
 		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 
@@ -362,18 +356,11 @@ func TestSaveFile(t *testing.T) {
 			ContentType: "image/jpeg",
 		}
 
-		body, writer, length := getMultipart(t, dep.testFile, meta)
-		meta.Size = fmt.Sprint(length)
-		buf, err := json.Marshal(meta)
-		require.NoError(t, err)
+		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
 		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
-
-		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), metaPrefix+id, buf).
-			Return(nil)
 
 		dep.mockFileBackend.EXPECT().
 			Save(gomock.Any(), filePrefix+id).
@@ -385,7 +372,7 @@ func TestSaveFile(t *testing.T) {
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	})
 
-	t.Run("conflict in file backend", func(t *testing.T) {
+	t.Run("conflict in meta backend", func(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
 
@@ -405,13 +392,15 @@ func TestSaveFile(t *testing.T) {
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
-		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), metaPrefix+id, buf).
-			Return(nil)
+		mockRecorder := &mockWriter{buf: make([]byte, 0)}
 
 		dep.mockFileBackend.EXPECT().
 			Save(gomock.Any(), filePrefix+id).
-			Return(nil, app.ErrConflict)
+			Return(mockRecorder, nil)
+
+		dep.mockMetadataBackend.EXPECT().
+			Save(gomock.Any(), metaPrefix+id, buf).
+			Return(app.ErrConflict)
 
 		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
 

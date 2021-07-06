@@ -5,9 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
@@ -134,32 +132,30 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.ErrBadRequest().AddMessages("invalid file found"))
 		return
 	}
+	contentType := http.DetectContentType(sniff)
 
-	tmp, err := ioutil.TempFile(os.TempDir(), fmt.Sprintf("b-fast-%s-%s-tmp", filePrefix, id))
+	writer, err := s.FileBackend.Save(r.Context(), filePrefix+id)
+	if errors.Is(err, app.ErrConflict) {
+		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		return
+	} else if err != nil {
+		s.Logger.Error("unable to save to file backend", zap.Error(err))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
+		return
+	}
+	defer writer.Close()
+
+	length, err := io.Copy(writer, file)
 	if err != nil {
-		s.Logger.Error("unable to open temporary file for buffering", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
-		return
-	}
-	defer os.Remove(tmp.Name())
-	defer tmp.Close()
-
-	length, err := io.Copy(tmp, file)
-	if err != nil && err != io.EOF {
-		s.Logger.Error("unable to write to temporary file", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
-		return
-	}
-	if _, err := tmp.Seek(0, 0); err != nil {
-		s.Logger.Error("unable to seek back to 0", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
+		s.Logger.Error("unable to write to file backend", zap.Error(err), zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 		return
 	}
 
 	meta := Metadata{
 		Version:     1,
 		Filename:    p.FileName(),
-		ContentType: http.DetectContentType(sniff),
+		ContentType: contentType,
 		Size:        fmt.Sprint(length),
 	}
 
@@ -171,27 +167,15 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 
 	err = s.MetadataBackend.Save(r.Context(), metaPrefix+id, buf)
 	if errors.Is(err, app.ErrConflict) {
-		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
+		s.Logger.Error("conflicting identifier in metadata backend when file backend reports no conflict", zap.Error(err), zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected())
 		return
 	} else if err != nil {
-		s.Logger.Error("unable to save to metadata backend", zap.Error(err))
+		s.Logger.Error("unable to save to metadata backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file metadata"))
 		return
 	}
 
-	writer, err := s.FileBackend.Save(r.Context(), filePrefix+id)
-	if errors.Is(err, app.ErrConflict) {
-		s.Logger.Error("conflicting identifier in file backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected())
-		return
-	} else if err != nil {
-		s.Logger.Error("unable to save to file backend", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
-		return
-	}
-
-	defer writer.Close()
-	io.Copy(writer, tmp)
 	response.WriteResponse(w, r, service.Ret(s.BaseURL, filePrefix, id))
 }
 
