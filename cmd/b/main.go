@@ -34,7 +34,7 @@ func main() {
 	asset := box.GetAssetExtractor()
 	defer asset.Close()
 
-	redis, err := backend.NewBasicRedisBackend("127.0.0.1:6379")
+	redis, err := backend.NewRedisBackend("127.0.0.1:6379")
 	if err != nil {
 		logger.Fatal("unable to connect to redis", zap.Error(err))
 	}

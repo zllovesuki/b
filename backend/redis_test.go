@@ -11,7 +11,7 @@ import (
 )
 
 func getRedisFixtures(t *testing.T) (*RedisBackend, func()) {
-	b, err := NewBasicRedisBackend("127.0.0.1:6379")
+	b, err := NewRedisBackend("127.0.0.1:6379")
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)

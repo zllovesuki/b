@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RedisBackend implements app.Backend to provide simple KV storage
 type RedisBackend struct {
 	cli *redis.Client
 }
@@ -17,8 +18,8 @@ type RedisBackend struct {
 var _ app.Backend = &RedisBackend{}
 var _ app.Removable = &RedisBackend{}
 
-// NewBasicRedisBackend returns a redis backed storage for the application
-func NewBasicRedisBackend(url string) (*RedisBackend, error) {
+// NewRedisBackend returns a redis backed storage for the application
+func NewRedisBackend(url string) (*RedisBackend, error) {
 	b := &RedisBackend{
 		cli: redis.NewClient(&redis.Options{
 			Addr: url,

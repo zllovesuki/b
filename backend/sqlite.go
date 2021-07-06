@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// SQLiteData is the data model for storing bytes in SQLite
 type SQLiteData struct {
 	ID      string `gorm:"primaryKey"`
 	Data    []byte
@@ -20,10 +21,12 @@ type SQLiteData struct {
 	Expires time.Time
 }
 
+// TableName is used for gorm.io only, overwriting the default table name
 func (SQLiteData) TableName() string {
 	return "backend_sqlite_data"
 }
 
+// SQLiteBackend implements app.Backend to persist KV data
 type SQLiteBackend struct {
 	db *gorm.DB
 }
@@ -31,6 +34,7 @@ type SQLiteBackend struct {
 var _ app.Backend = &SQLiteBackend{}
 var _ app.Removable = &SQLiteBackend{}
 
+// NewSQLiteBackend returns a SQLite backend for the application
 func NewSQLiteBackend(dbPath string) (*SQLiteBackend, error) {
 	if dbPath == "" {
 		return nil, errors.New("sqlite db path cannot be empty")
