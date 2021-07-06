@@ -1,3 +1,4 @@
 ignore:
   - "box/"      # packaging related
   - "response/" # responder
+  - "app/"      # mainly interfaces and mocks
