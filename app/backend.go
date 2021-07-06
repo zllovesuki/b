@@ -11,6 +11,8 @@ import (
 
 // Define errors used by the application
 var (
+	// for backend that supports retrospection on TTL, ErrExpired is preferred to ErrNotFound
+	ErrExpired  = fmt.Errorf("ttl exceeded")
 	ErrNotFound = fmt.Errorf("not found")
 	ErrConflict = fmt.Errorf("conflict identifier")
 )

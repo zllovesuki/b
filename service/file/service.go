@@ -75,7 +75,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file metadata"))
 		return
-	case app.ErrNotFound:
+	case app.ErrNotFound, app.ErrExpired:
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "file not found")
 		return
@@ -95,7 +95,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	default:
 		s.Logger.Error("unable to retrieve from file backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file"))
-	case app.ErrNotFound:
+	case app.ErrNotFound, app.ErrExpired:
 		s.Logger.Error("file backend returned not found when metadata exists", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata"))
 	case nil:

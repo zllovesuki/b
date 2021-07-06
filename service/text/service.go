@@ -94,7 +94,7 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	default:
 		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve text paste"))
-	case app.ErrNotFound:
+	case app.ErrNotFound, app.ErrExpired:
 		w.WriteHeader(http.StatusNotFound)
 		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(w, "text not found")
