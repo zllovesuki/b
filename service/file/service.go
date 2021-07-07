@@ -115,10 +115,12 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = s.MetadataBackend.Retrieve(r.Context(), metaPrefix+id)
-	if err == nil || errors.Is(err, app.ErrExpired) {
+	if err == nil {
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 		return
-	} else if !errors.Is(err, app.ErrNotFound) {
+	} else if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
+		// fallthrough, allow override on expired file
+	} else {
 		s.Logger.Error("unable to check metadata backend prior to processing", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 		return

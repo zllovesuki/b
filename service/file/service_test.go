@@ -322,6 +322,49 @@ func TestSaveFile(t *testing.T) {
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
 	})
 
+	t.Run("expired id should allow overwriting", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "wqrewr"
+		meta := Metadata{
+			Version:     1,
+			Filename:    "image.jpg",
+			ContentType: "image/jpeg",
+		}
+
+		body, writer, length := getMultipart(t, dep.testFile, meta)
+		meta.Size = fmt.Sprint(length)
+		buf, err := json.Marshal(meta)
+		require.NoError(t, err)
+
+		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
+		require.NoError(t, err)
+		r.Header.Add("Content-Type", writer.FormDataContentType())
+
+		dep.mockMetadataBackend.EXPECT().
+			Retrieve(gomock.Any(), metaPrefix+id).
+			Return(nil, app.ErrExpired)
+
+		dep.mockMetadataBackend.EXPECT().
+			Save(gomock.Any(), metaPrefix+id, buf).
+			Return(nil)
+
+		dep.mockFileBackend.EXPECT().
+			Save(gomock.Any(), filePrefix+id, gomock.Any()).
+			Return(length, nil)
+
+		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		var ret response.V1Response
+		err = json.NewDecoder(resp.Body).Decode(&ret)
+		require.NoError(t, err)
+		require.Equal(t, service.Ret(dep.baseURL, filePrefix, id), ret.Result)
+	})
+
 	t.Run("metadata backend error", func(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
