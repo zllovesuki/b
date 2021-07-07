@@ -38,8 +38,8 @@ And the baseURL is also hard coded to use `http://127.0.0.1:3000`
 
 In a future version it is planned to add:
 
-1. S3/S3-compatible storage to back file hosting
-2. *SQL and its garden varieties for link/text/file metadata
+1. ~~S3/S3-compatible storage to back file hosting~~ (done!)
+2. ~~*SQL and its garden varieties for link/text/file metadata~~ (added SQLite for `app.Backend`, not `app.FastBackend` though)
 3. Anything you feel like you want to add. The interface exists in `app/backend.go`
 4. Environmental variables based configurations
 
