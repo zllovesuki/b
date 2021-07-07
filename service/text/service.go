@@ -11,7 +11,6 @@ import (
 
 	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -106,15 +105,24 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	w.Write(text)
 }
 
-// Route returns a mountable route for text service
-func (s *Service) Route(r *chi.Mux) http.Handler {
+// SaveRoute returns a mountable router for saving text paste.
+// Alternatively, it can mount directly to the provided router.
+func (s *Service) SaveRoute(r chi.Router) http.Handler {
 	if r == nil {
 		r = chi.NewRouter()
 	}
 
-	nocache := r.Group(nil)
-	nocache.Use(middleware.NoCache)
-	nocache.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveText)
+	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveText)
+
+	return r
+}
+
+// RetrieveRoute returns a mountable router for saving text paste.
+// Alternatively, it can mount directly to the provided router.
+func (s *Service) RetrieveRoute(r chi.Router) http.Handler {
+	if r == nil {
+		r = chi.NewRouter()
+	}
 
 	r.Get(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.retrieveText)
 

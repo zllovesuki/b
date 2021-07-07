@@ -11,7 +11,6 @@ import (
 	"github.com/zllovesuki/b/validator"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -104,15 +103,24 @@ func (s *Service) retrieveLink(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, string(long), http.StatusFound)
 }
 
-// Route returns a mountable route for URL service
-func (s *Service) Route(r *chi.Mux) http.Handler {
+// SaveRoute returns a mountable router for saving url redirect
+// Alternatively, it can mount directly to the provided router.
+func (s *Service) SaveRoute(r chi.Router) http.Handler {
 	if r == nil {
 		r = chi.NewRouter()
 	}
 
-	nocache := r.Group(nil)
-	nocache.Use(middleware.NoCache)
-	nocache.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveLink)
+	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveLink)
+
+	return r
+}
+
+// RetrieveRoute returns a mountable router for retrieving url redirect
+// Alternatively, it can mount directly to the provided router.
+func (s *Service) RetrieveRoute(r chi.Router) http.Handler {
+	if r == nil {
+		r = chi.NewRouter()
+	}
 
 	r.Get(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.retrieveLink)
 

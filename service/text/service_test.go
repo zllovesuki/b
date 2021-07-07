@@ -67,7 +67,7 @@ func TestGetText(t *testing.T) {
 			Retrieve(gomock.Any(), prefix+id).
 			Return([]byte(ret), nil)
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.RetrieveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -90,7 +90,7 @@ func TestGetText(t *testing.T) {
 			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, app.ErrNotFound)
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.RetrieveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -110,7 +110,7 @@ func TestGetText(t *testing.T) {
 			Retrieve(gomock.Any(), prefix+id).
 			Return(nil, fmt.Errorf("error"))
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.RetrieveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -126,7 +126,7 @@ func TestGetText(t *testing.T) {
 		r, err := http.NewRequest("GET", service.Prefix(prefix, id), nil)
 		require.NoError(t, err)
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.RetrieveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 
@@ -155,7 +155,7 @@ func TestSaveText(t *testing.T) {
 			Save(gomock.Any(), prefix+id, []byte(req.Text)).
 			Return(nil)
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -185,7 +185,7 @@ func TestSaveText(t *testing.T) {
 			Save(gomock.Any(), prefix+id, []byte(req.Text)).
 			Return(app.ErrConflict)
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusConflict, resp.StatusCode)
@@ -210,7 +210,7 @@ func TestSaveText(t *testing.T) {
 			Save(gomock.Any(), prefix+id, []byte(req.Text)).
 			Return(fmt.Errorf("error"))
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
@@ -225,7 +225,7 @@ func TestSaveText(t *testing.T) {
 		r, err := http.NewRequest("POST", service.Prefix(prefix, id), nil)
 		require.NoError(t, err)
 
-		dep.service.Route(nil).ServeHTTP(dep.recorder, r)
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 

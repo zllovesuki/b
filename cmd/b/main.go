@@ -34,9 +34,13 @@ func main() {
 	asset := box.GetAssetExtractor()
 	defer asset.Close()
 
-	redis, err := backend.NewRedisBackend("127.0.0.1:6379")
+	// b, err := backend.NewRedisBackend("127.0.0.1:6379")
+	// if err != nil {
+	// 	logger.Fatal("unable to connect to redis", zap.Error(err))
+	// }
+	b, err := backend.NewSQLiteBackend("bfast.db")
 	if err != nil {
-		logger.Fatal("unable to connect to redis", zap.Error(err))
+		logger.Fatal("unable to open sqlite database")
 	}
 
 	index, err := index.NewService(index.Options{
@@ -49,7 +53,7 @@ func main() {
 
 	l, err := link.NewService(link.Options{
 		BaseURL: "http://127.0.0.1:3000",
-		Backend: redis,
+		Backend: b,
 		Logger:  logger,
 	})
 	if err != nil {
@@ -58,7 +62,7 @@ func main() {
 
 	t, err := text.NewService(text.Options{
 		BaseURL: "http://127.0.0.1:3000",
-		Backend: redis,
+		Backend: b,
 		Logger:  logger,
 	})
 	if err != nil {
@@ -84,7 +88,7 @@ func main() {
 
 	f, err := file.NewService(file.Options{
 		BaseURL:         "http://127.0.0.1:3000",
-		MetadataBackend: redis,
+		MetadataBackend: b,
 		FileBackend:     s,
 		Logger:          logger,
 	})
@@ -100,9 +104,16 @@ func main() {
 	r.Mount("/debug", middleware.Profiler())
 
 	r.Mount("/", index.Route())
-	l.Route(r)
-	t.Route(r)
-	f.Route(r)
+
+	postGroup := r.Group(nil)
+	postGroup.Use(middleware.NoCache)
+	f.SaveRoute(postGroup)
+	l.SaveRoute(postGroup)
+	t.SaveRoute(postGroup)
+
+	f.RetrieveRoute(r)
+	l.RetrieveRoute(r)
+	t.RetrieveRoute(r)
 
 	if *routes {
 		fmt.Println(docgen.JSONRoutesDoc(r))

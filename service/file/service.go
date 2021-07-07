@@ -12,7 +12,6 @@ import (
 	"github.com/zllovesuki/b/service"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -184,15 +183,24 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	response.WriteResponse(w, r, service.Ret(s.BaseURL, filePrefix, id))
 }
 
-// Route returns a mountable route for file service
-func (s *Service) Route(r *chi.Mux) http.Handler {
+// SaveRoute returns a mountable router for saving file.
+// Alternatively, it can mount directly to the provided router
+func (s *Service) SaveRoute(r chi.Router) http.Handler {
 	if r == nil {
 		r = chi.NewRouter()
 	}
 
-	nocache := r.Group(nil)
-	nocache.Use(middleware.NoCache)
-	nocache.Post(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.saveFile)
+	r.Post(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.saveFile)
+
+	return r
+}
+
+// RetrieveRoute returns a mountable router for retrieving files.
+// Alternatively, it can mount directly to the provided router.
+func (s *Service) RetrieveRoute(r chi.Router) http.Handler {
+	if r == nil {
+		r = chi.NewRouter()
+	}
 
 	r.Get(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.retrieveFile)
 
