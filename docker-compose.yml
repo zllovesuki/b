@@ -4,3 +4,13 @@ services:
         image: redis
         ports:
             - "6379:6379"
+    minio:
+        command: server /data
+        image: minio/minio
+        ports:
+            - "9000:9000"
+        volumes:
+            - minio-data:/data
+
+volumes: 
+    minio-data:

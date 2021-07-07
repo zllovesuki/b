@@ -69,6 +69,18 @@ func main() {
 	if err != nil {
 		logger.Fatal("unable to get file fast backend", zap.Error(err))
 	}
+	// s, err := fast.NewS3FastBackend(fast.S3Config{
+	// 	Bucket:         "bfast",
+	// 	Endpoint:       "127.0.0.1:9000",
+	// 	Region:         "us-east-1",
+	// 	AccessKey:      "minioadmin",
+	// 	AccessSecret:   "minioadmin",
+	// 	DisableSSL:     true,
+	// 	ForcePathStyle: true,
+	// })
+	// if err != nil {
+	// 	logger.Fatal("unable to get s3 fast backend", zap.Error(err))
+	// }
 
 	f, err := file.NewService(file.Options{
 		BaseURL:         "http://127.0.0.1:3000",
