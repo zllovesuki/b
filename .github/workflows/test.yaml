@@ -23,6 +23,13 @@ jobs:
           --health-retries 5
         ports:
           - 6379:6379
+      minio:
+        image: rachel.sh/github-actions/minio:RELEASE.2021-06-07T21-40-51Z
+        credentials:
+          username: ${{ secrets.RACHEL_SH_PULL_USERNAME }}
+          password: ${{ secrets.RACHEL_SH_PULL_PASSWORD }}
+        ports:
+          - 9000:9000
 
     steps: 
       - name: Checkout repository code
