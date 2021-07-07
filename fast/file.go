@@ -2,7 +2,6 @@ package fast
 
 import (
 	"context"
-	"encoding/binary"
 	"io"
 	"os"
 	"path/filepath"
@@ -48,16 +47,26 @@ func (f *FileFastBackend) Save(c context.Context, identifier string) (io.WriteCl
 func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time.Duration) (io.WriteCloser, error) {
 	p := filepath.Join(f.dataDir, identifier)
 
-	_, err := os.Stat(p)
-	if !errors.Is(err, os.ErrNotExist) {
-		f, err := os.OpenFile(p, os.O_RDONLY, 0600)
-		if err != nil {
-			return nil, errors.Wrap(err, "cannot open file to check for expiration")
+	exist := true
+
+	if _, err := os.Stat(p); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			exist = false
+		} else {
+			return nil, errors.Wrap(err, "testing file existence")
 		}
-		defer f.Close()
-		ex, err := ttlExceeded(f)
+	}
+
+	if exist {
+		r, err := os.OpenFile(p, os.O_RDONLY, 0600)
 		if err != nil {
-			return nil, errors.Wrap(err, "error checking ttl of the file")
+			return nil, errors.Wrap(err, "opening file for ttl checking")
+		}
+		defer r.Close()
+
+		ex, err := app.TTLExceeded(r)
+		if err != nil {
+			return nil, errors.Wrap(err, "checking ttl of the file")
 		}
 		if !ex {
 			return nil, app.ErrConflict
@@ -65,16 +74,16 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 	}
 
 	// overwrite file if ttl exceeded, or just a new file in general
-	file, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	w, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot open file")
 	}
 
-	if err := writeTTL(file, ttl); err != nil {
+	if err := app.WriteTTL(w, ttl); err != nil {
 		return nil, err
 	}
 
-	return file, nil
+	return w, nil
 }
 
 func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.ReadCloser, error) {
@@ -88,7 +97,7 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 		return nil, errors.Wrap(err, "cannot open file")
 	}
 
-	ex, err := ttlExceeded(file)
+	ex, err := app.TTLExceeded(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking ttl of the file")
 	}
@@ -106,42 +115,4 @@ func (f *FileFastBackend) Delete(c context.Context, identifier string) error {
 	p := filepath.Join(f.dataDir, identifier)
 
 	return os.Remove(p)
-}
-
-// TODO(zllovesuki): formalized the on-disk format as a specification
-func writeTTL(f *os.File, ttl time.Duration) error {
-	head := make([]byte, 15+8) // 15 bytes for when it was created, 8 bytes for ttl
-	now, err := time.Now().UTC().MarshalBinary()
-	if err != nil {
-		return errors.Wrap(err, "error marshalling time into binary")
-	}
-
-	copy(head[:15], now)
-	binary.LittleEndian.PutUint64(head[15:23], uint64(ttl))
-
-	if _, err := f.Write(head); err != nil {
-		return errors.Wrap(err, "cannot write expiration data")
-	}
-
-	return nil
-}
-
-func ttlExceeded(f *os.File) (bool, error) {
-	head := make([]byte, 15+8)
-	if _, err := f.Read(head); err != nil {
-		return false, errors.Wrap(err, "cannot read expiration data")
-	}
-
-	ttl := int64(binary.LittleEndian.Uint64(head[15:23]))
-
-	if ttl == 0 {
-		return false, nil
-	}
-
-	var ref time.Time
-	if err := ref.UnmarshalBinary(head[:15]); err != nil {
-		return false, errors.Wrap(err, "error unmarshalling binary into time")
-	}
-
-	return time.Now().After(ref.Add(time.Duration(ttl))), nil
 }
