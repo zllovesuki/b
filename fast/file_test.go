@@ -2,7 +2,6 @@ package fast
 
 import (
 	"context"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -17,22 +16,22 @@ var p = filepath.Join(os.TempDir(), "b-fast")
 
 type testDependencies struct {
 	f    *FileFastBackend
-	file *os.File
+	file func() *os.File
 }
 
 func getFixtures(t *testing.T) (*testDependencies, func()) {
 	b, err := NewFileFastBackend(p)
 	require.NoError(t, err)
 
-	file, err := os.Open(filepath.Join("fixtures", "image.jpg"))
-	require.NoError(t, err)
-
 	return &testDependencies{
-			f:    b,
-			file: file,
+			f: b,
+			file: func() *os.File {
+				file, err := os.Open(filepath.Join("fixtures", "image.jpg"))
+				require.NoError(t, err)
+				return file
+			},
 		}, func() {
 			os.RemoveAll(p)
-			file.Close()
 		}
 }
 
@@ -43,17 +42,10 @@ func TestFileFastBackend(t *testing.T) {
 
 		key := "happy"
 
-		w, err := dep.f.Save(context.Background(), key)
-		require.NoError(t, err)
-		defer w.Close()
-
-		src, err := ioutil.ReadAll(dep.file)
+		src, err := ioutil.ReadAll(dep.file())
 		require.NoError(t, err)
 
-		_, err = dep.file.Seek(0, 0)
-		require.NoError(t, err)
-
-		_, err = io.Copy(w, dep.file)
+		written, err := dep.f.Save(context.Background(), key, dep.file())
 		require.NoError(t, err)
 
 		r, err := dep.f.Retrieve(context.Background(), key)
@@ -62,6 +54,7 @@ func TestFileFastBackend(t *testing.T) {
 		saved, err := ioutil.ReadAll(r)
 		require.NoError(t, err)
 
+		require.Equal(t, written, int64(len(saved)))
 		require.Equal(t, src, saved)
 	})
 
@@ -71,13 +64,10 @@ func TestFileFastBackend(t *testing.T) {
 
 		key := "conflicting"
 
-		w, err := dep.f.Save(context.Background(), key)
-		require.NoError(t, err)
-		defer w.Close()
-		_, err = io.Copy(w, dep.file)
+		_, err := dep.f.Save(context.Background(), key, dep.file())
 		require.NoError(t, err)
 
-		_, err = dep.f.Save(context.Background(), key)
+		_, err = dep.f.Save(context.Background(), key, dep.file())
 		require.ErrorIs(t, err, app.ErrConflict)
 	})
 
@@ -88,17 +78,10 @@ func TestFileFastBackend(t *testing.T) {
 		key := "save-with-ttl"
 		ttl := time.Second
 
-		w, err := dep.f.SaveTTL(context.Background(), key, ttl*2)
-		require.NoError(t, err)
-		defer w.Close()
-
-		src, err := ioutil.ReadAll(dep.file)
+		src, err := ioutil.ReadAll(dep.file())
 		require.NoError(t, err)
 
-		_, err = dep.file.Seek(0, 0)
-		require.NoError(t, err)
-
-		_, err = io.Copy(w, dep.file)
+		written, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl*2)
 		require.NoError(t, err)
 
 		<-time.After(ttl)
@@ -109,6 +92,7 @@ func TestFileFastBackend(t *testing.T) {
 		saved, err := ioutil.ReadAll(r)
 		require.NoError(t, err)
 
+		require.Equal(t, written, int64(len(saved)))
 		require.Equal(t, src, saved)
 	})
 
@@ -117,16 +101,12 @@ func TestFileFastBackend(t *testing.T) {
 		defer clean()
 
 		key := "save-with-ttl-conflict"
-		ttl := time.Second
+		ttl := time.Hour
 
-		w, err := dep.f.SaveTTL(context.Background(), key, ttl*2)
-		require.NoError(t, err)
-		defer w.Close()
-
-		_, err = io.Copy(w, dep.file)
+		_, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl)
 		require.NoError(t, err)
 
-		_, err = dep.f.SaveTTL(context.Background(), key, ttl*2)
+		_, err = dep.f.SaveTTL(context.Background(), key, dep.file(), ttl/2)
 		require.ErrorIs(t, err, app.ErrConflict)
 	})
 
@@ -137,29 +117,12 @@ func TestFileFastBackend(t *testing.T) {
 		key := "save-past-ttl"
 		ttl := time.Second
 
-		w, err := dep.f.SaveTTL(context.Background(), key, ttl/2)
-		require.NoError(t, err)
-		defer w.Close()
-
-		_, err = io.Copy(w, dep.file)
-		require.NoError(t, err)
-
-		_, err = dep.file.Seek(0, 0)
+		_, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl/2)
 		require.NoError(t, err)
 
 		<-time.After(ttl)
 
-		w, err = dep.f.SaveTTL(context.Background(), key, ttl*2)
-		require.NoError(t, err)
-		defer w.Close()
-
-		src, err := ioutil.ReadAll(dep.file)
-		require.NoError(t, err)
-
-		_, err = dep.file.Seek(0, 0)
-		require.NoError(t, err)
-
-		_, err = io.Copy(w, dep.file)
+		written, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl*2)
 		require.NoError(t, err)
 
 		<-time.After(ttl)
@@ -167,9 +130,13 @@ func TestFileFastBackend(t *testing.T) {
 		r, err := dep.f.Retrieve(context.Background(), key)
 		require.NoError(t, err)
 		defer r.Close()
+
 		saved, err := ioutil.ReadAll(r)
 		require.NoError(t, err)
+		src, err := ioutil.ReadAll(dep.file())
+		require.NoError(t, err)
 
+		require.Equal(t, written, int64(len(saved)))
 		require.Equal(t, src, saved)
 	})
 
@@ -180,11 +147,7 @@ func TestFileFastBackend(t *testing.T) {
 		key := "get-past-ttl"
 		ttl := time.Second
 
-		w, err := dep.f.SaveTTL(context.Background(), key, ttl/2)
-		require.NoError(t, err)
-		defer w.Close()
-
-		_, err = io.Copy(w, dep.file)
+		_, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl/2)
 		require.NoError(t, err)
 
 		<-time.After(ttl)
@@ -200,12 +163,8 @@ func TestFileDelete(t *testing.T) {
 
 	key := "happy"
 
-	w, err := dep.f.Save(context.Background(), key)
+	_, err := dep.f.Save(context.Background(), key, dep.file())
 	require.NoError(t, err)
-
-	_, err = io.Copy(w, dep.file)
-	require.NoError(t, err)
-	w.Close()
 
 	err = dep.f.Delete(context.Background(), key)
 	require.NoError(t, err)

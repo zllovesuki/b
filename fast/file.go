@@ -40,11 +40,13 @@ func NewFileFastBackend(dataDir string) (*FileFastBackend, error) {
 	}, nil
 }
 
-func (f *FileFastBackend) Save(c context.Context, identifier string) (io.WriteCloser, error) {
-	return f.SaveTTL(c, identifier, 0)
+func (f *FileFastBackend) Save(c context.Context, identifier string, r io.ReadCloser) (int64, error) {
+	return f.SaveTTL(c, identifier, r, 0)
 }
 
-func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time.Duration) (io.WriteCloser, error) {
+func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, r io.ReadCloser, ttl time.Duration) (int64, error) {
+	defer r.Close()
+
 	p := filepath.Join(f.dataDir, identifier)
 
 	exist := true
@@ -53,37 +55,38 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, ttl time
 		if errors.Is(err, os.ErrNotExist) {
 			exist = false
 		} else {
-			return nil, errors.Wrap(err, "testing file existence")
+			return 0, errors.Wrap(err, "testing file existence")
 		}
 	}
 
 	if exist {
 		r, err := os.OpenFile(p, os.O_RDONLY, 0600)
 		if err != nil {
-			return nil, errors.Wrap(err, "opening file for ttl checking")
+			return 0, errors.Wrap(err, "opening file for ttl checking")
 		}
 		defer r.Close()
 
 		ex, err := app.TTLExceeded(r)
 		if err != nil {
-			return nil, errors.Wrap(err, "checking ttl of the file")
+			return 0, errors.Wrap(err, "checking ttl of the file")
 		}
 		if !ex {
-			return nil, app.ErrConflict
+			return 0, app.ErrConflict
 		}
 	}
 
 	// overwrite file if ttl exceeded, or just a new file in general
 	w, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot open file")
+		return 0, errors.Wrap(err, "cannot open file")
 	}
 
 	if err := app.WriteTTL(w, ttl); err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	return w, nil
+	buf := make([]byte, 2<<20) // 2Mi buffer
+	return io.CopyBuffer(w, app.NewCtxReader(c, r), buf)
 }
 
 func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.ReadCloser, error) {

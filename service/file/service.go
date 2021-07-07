@@ -144,7 +144,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	}
 	contentType := http.DetectContentType(sniff)
 
-	writer, err := s.FileBackend.Save(r.Context(), filePrefix+id)
+	written, err := s.FileBackend.Save(r.Context(), filePrefix+id, io.NopCloser(app.NewCtxReader(r.Context(), file)))
 	if errors.Is(err, app.ErrConflict) {
 		s.Logger.Error("metadata backend reported no conflict when checking but reported conflict on save", zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
@@ -154,20 +154,12 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
 		return
 	}
-	defer writer.Close()
-
-	length, err := io.Copy(writer, app.NewCtxReader(r.Context(), file))
-	if err != nil {
-		s.Logger.Error("unable to write to file backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
-		return
-	}
 
 	meta := Metadata{
 		Version:     1,
 		Filename:    p.FileName(),
 		ContentType: contentType,
-		Size:        fmt.Sprint(length),
+		Size:        fmt.Sprint(written),
 	}
 
 	buf, err := json.Marshal(meta)

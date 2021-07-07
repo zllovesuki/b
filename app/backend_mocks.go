@@ -118,33 +118,33 @@ func (mr *MockFastBackendMockRecorder) Retrieve(arg0, arg1 interface{}) *gomock.
 }
 
 // Save mocks base method.
-func (m *MockFastBackend) Save(arg0 context.Context, arg1 string) (io.WriteCloser, error) {
+func (m *MockFastBackend) Save(arg0 context.Context, arg1 string, arg2 io.ReadCloser) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", arg0, arg1)
-	ret0, _ := ret[0].(io.WriteCloser)
+	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2)
+	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Save indicates an expected call of Save.
-func (mr *MockFastBackendMockRecorder) Save(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockFastBackendMockRecorder) Save(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockFastBackend)(nil).Save), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockFastBackend)(nil).Save), arg0, arg1, arg2)
 }
 
 // SaveTTL mocks base method.
-func (m *MockFastBackend) SaveTTL(arg0 context.Context, arg1 string, arg2 time.Duration) (io.WriteCloser, error) {
+func (m *MockFastBackend) SaveTTL(arg0 context.Context, arg1 string, arg2 io.ReadCloser, arg3 time.Duration) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveTTL", arg0, arg1, arg2)
-	ret0, _ := ret[0].(io.WriteCloser)
+	ret := m.ctrl.Call(m, "SaveTTL", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SaveTTL indicates an expected call of SaveTTL.
-func (mr *MockFastBackendMockRecorder) SaveTTL(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockFastBackendMockRecorder) SaveTTL(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTTL", reflect.TypeOf((*MockFastBackend)(nil).SaveTTL), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTTL", reflect.TypeOf((*MockFastBackend)(nil).SaveTTL), arg0, arg1, arg2, arg3)
 }
 
 // MockRemovable is a mock of Removable interface.
@@ -317,31 +317,31 @@ func (mr *MockRemovableFastBackendMockRecorder) Retrieve(arg0, arg1 interface{})
 }
 
 // Save mocks base method.
-func (m *MockRemovableFastBackend) Save(arg0 context.Context, arg1 string) (io.WriteCloser, error) {
+func (m *MockRemovableFastBackend) Save(arg0 context.Context, arg1 string, arg2 io.ReadCloser) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", arg0, arg1)
-	ret0, _ := ret[0].(io.WriteCloser)
+	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2)
+	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Save indicates an expected call of Save.
-func (mr *MockRemovableFastBackendMockRecorder) Save(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockRemovableFastBackendMockRecorder) Save(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRemovableFastBackend)(nil).Save), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRemovableFastBackend)(nil).Save), arg0, arg1, arg2)
 }
 
 // SaveTTL mocks base method.
-func (m *MockRemovableFastBackend) SaveTTL(arg0 context.Context, arg1 string, arg2 time.Duration) (io.WriteCloser, error) {
+func (m *MockRemovableFastBackend) SaveTTL(arg0 context.Context, arg1 string, arg2 io.ReadCloser, arg3 time.Duration) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveTTL", arg0, arg1, arg2)
-	ret0, _ := ret[0].(io.WriteCloser)
+	ret := m.ctrl.Call(m, "SaveTTL", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SaveTTL indicates an expected call of SaveTTL.
-func (mr *MockRemovableFastBackendMockRecorder) SaveTTL(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockRemovableFastBackendMockRecorder) SaveTTL(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTTL", reflect.TypeOf((*MockRemovableFastBackend)(nil).SaveTTL), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveTTL", reflect.TypeOf((*MockRemovableFastBackend)(nil).SaveTTL), arg0, arg1, arg2, arg3)
 }
