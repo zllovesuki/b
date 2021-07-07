@@ -80,6 +80,7 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, r io.Rea
 	if err != nil {
 		return 0, errors.Wrap(err, "cannot open file")
 	}
+	defer w.Close()
 
 	if err := app.WriteTTL(w, ttl); err != nil {
 		return 0, err
@@ -108,7 +109,7 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 	if ex {
 		// compaction on access
 		defer os.Remove(p)
-		return nil, app.ErrNotFound
+		return nil, app.ErrExpired
 	}
 
 	return file, nil

@@ -40,7 +40,7 @@ func TestFileFastBackend(t *testing.T) {
 		dep, clean := getFixtures(t)
 		defer clean()
 
-		key := "happy"
+		key := randomString(16)
 
 		src, err := ioutil.ReadAll(dep.file())
 		require.NoError(t, err)
@@ -62,7 +62,7 @@ func TestFileFastBackend(t *testing.T) {
 		dep, clean := getFixtures(t)
 		defer clean()
 
-		key := "conflicting"
+		key := randomString(16)
 
 		_, err := dep.f.Save(context.Background(), key, dep.file())
 		require.NoError(t, err)
@@ -75,7 +75,7 @@ func TestFileFastBackend(t *testing.T) {
 		dep, clean := getFixtures(t)
 		defer clean()
 
-		key := "save-with-ttl"
+		key := randomString(16)
 		ttl := time.Second
 
 		src, err := ioutil.ReadAll(dep.file())
@@ -100,7 +100,7 @@ func TestFileFastBackend(t *testing.T) {
 		dep, clean := getFixtures(t)
 		defer clean()
 
-		key := "save-with-ttl-conflict"
+		key := randomString(16)
 		ttl := time.Hour
 
 		_, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl)
@@ -114,7 +114,7 @@ func TestFileFastBackend(t *testing.T) {
 		dep, clean := getFixtures(t)
 		defer clean()
 
-		key := "save-past-ttl"
+		key := randomString(16)
 		ttl := time.Second
 
 		_, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl/2)
@@ -140,11 +140,11 @@ func TestFileFastBackend(t *testing.T) {
 		require.Equal(t, src, saved)
 	})
 
-	t.Run("get outside of ttl should not found", func(t *testing.T) {
+	t.Run("get outside of ttl should expire", func(t *testing.T) {
 		dep, clean := getFixtures(t)
 		defer clean()
 
-		key := "get-past-ttl"
+		key := randomString(16)
 		ttl := time.Second
 
 		_, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl/2)
@@ -153,7 +153,7 @@ func TestFileFastBackend(t *testing.T) {
 		<-time.After(ttl)
 
 		_, err = dep.f.Retrieve(context.Background(), key)
-		require.ErrorIs(t, err, app.ErrNotFound)
+		require.ErrorIs(t, err, app.ErrExpired)
 	})
 }
 
@@ -161,7 +161,7 @@ func TestFileDelete(t *testing.T) {
 	dep, clean := getFixtures(t)
 	defer clean()
 
-	key := "happy"
+	key := randomString(16)
 
 	_, err := dep.f.Save(context.Background(), key, dep.file())
 	require.NoError(t, err)
