@@ -1,5 +1,5 @@
 # What is `b`?
-[![Go Reference](https://pkg.go.dev/badge/github.com/zllovesuki/b.svg)](https://pkg.go.dev/github.com/zllovesuki/b) ![testing](https://github.com/zllovesuki/b/actions/workflows/test.yaml/badge.svg) [![codecov](https://codecov.io/gh/zllovesuki/b/branch/main/graph/badge.svg?token=LJHGK83MNI)](https://codecov.io/gh/zllovesuki/b)
+[![Go Reference](https://pkg.go.dev/badge/github.com/zllovesuki/b.svg)](https://pkg.go.dev/github.com/zllovesuki/b) ![Pipeline](https://github.com/zllovesuki/b/actions/workflows/pipeline.yaml/badge.svg) [![codecov](https://codecov.io/gh/zllovesuki/b/branch/main/graph/badge.svg?token=LJHGK83MNI)](https://codecov.io/gh/zllovesuki/b)
 
 I got bored during 4th of July weekend, so a mini weekend hackathon to put something together.
 

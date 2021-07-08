@@ -1,0 +1,230 @@
+name: Pipeline
+on:
+  push:
+  release:
+    types: [published]
+
+jobs:
+  testing:
+    name: Unit Tests with Race Detector
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Github Actions does not support containers yet on WIN and DARWIN
+        # os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        os: ["ubuntu-latest"]
+    env:
+      OS: ${{ matrix.os }}
+
+    services:
+      redis:
+        image: redis
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+      minio:
+        image: rachel.sh/github-actions/minio:RELEASE.2021-06-07T21-40-51Z
+        credentials:
+          username: ${{ secrets.RACHEL_SH_PULL_USERNAME }}
+          password: ${{ secrets.RACHEL_SH_PULL_PASSWORD }}
+        ports:
+          - 9000:9000
+
+    steps: 
+      - name: Checkout repository code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.5
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Test with Coverage and Race Detector
+        run: go test -race ./... -covermode=atomic -coverprofile="coverage.out"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.out
+          directory: ./coverage/reports/
+          flags: unittests
+          env_vars: OS
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          path_to_write_report: ./coverage/codecov_report.txt
+          verbose: true
+
+  build-linux:
+    needs: testing
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.5
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build linux/amd64
+        run: CGO_ENABLED=1 go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b-linux-amd64 ./cmd/b/
+      - name: Release linux/amd64
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            bin/b-linux-amd64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cross-compile toolchains
+        run: sudo apt install -y gcc-aarch64-linux-gnu libc-dev-arm64-cross
+      - name: Build linux/arm64
+        run: GOARCH=arm64 GOOS=linux CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b-linux-arm64 ./cmd/b/
+      - name: Release linux/arm64
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            bin/b-linux-arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-darwin:
+    needs: testing
+    name: Build macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.5
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build darwin
+        run: |
+          CGO_ENABLED=1 SDKROOT=$(xcrun --sdk macosx --show-sdk-path) go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external" -o ./b-darwin-amd64 ./cmd/b/
+          GOARCH=arm64 GOOS=darwin CGO_ENABLED=1 SDKROOT=$(xcrun --sdk macosx --show-sdk-path) go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external" -o ./b-darwin-arm64 ./cmd/b/
+
+      - name: Setup Certificate and Sign
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          SIGNING_CERTIFICATE_P12_DATA: ${{ secrets.CERTIFICATE_OSX_APPLICATION }}
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+          SIGNING_CERTIFICATE_NAME: ${{ secrets.CERTIFICATE_NAME }}
+          KEYCHAIN_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+        run: |
+          security create-keychain -p $KEYCHAIN_PASSWORD buildagent
+          security default-keychain -s buildagent
+          security unlock-keychain -p $KEYCHAIN_PASSWORD buildagent
+          security import <(echo $SIGNING_CERTIFICATE_P12_DATA | base64 --decode) \
+            -f pkcs12 \
+            -k buildagent \
+            -P $SIGNING_CERTIFICATE_PASSWORD \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $KEYCHAIN_PASSWORD buildagent
+          security find-identity -v buildagent
+          codesign --force -s "${SIGNING_CERTIFICATE_NAME}" --timestamp --options runtime ./b-darwin-amd64
+          codesign -vv -d ./b-darwin-amd64
+          codesign --force -s "${SIGNING_CERTIFICATE_NAME}" --timestamp --options runtime ./b-darwin-arm64
+          codesign -vv -d ./b-darwin-arm64
+
+      - name: Notarize darwin
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          APP_SPECIFIC_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          # amd64
+          /usr/bin/ditto -c -k --keepParent ./b-darwin-amd64 ./b-darwin-amd64.zip ;
+          SUBMISSION_INFO=$(xcrun altool --notarize-app --primary-bundle-id=net.miragespace.b -u $APPLE_ID -p $APP_SPECIFIC_PASSWORD --file ./b-darwin-amd64.zip 2>&1) ;
+          REQUEST_UUID=$(echo ${SUBMISSION_INFO} | awk -F ' = ' '/RequestUUID/ {print $2}')
+          xcrun altool --notarization-info $REQUEST_UUID --username $APPLE_ID --password $APP_SPECIFIC_PASSWORD --output-format xml
+          # arm64
+          /usr/bin/ditto -c -k --keepParent ./b-darwin-arm64 ./b-darwin-arm64.zip ;
+          SUBMISSION_INFO=$(xcrun altool --notarize-app --primary-bundle-id=net.miragespace.b -u $APPLE_ID -p $APP_SPECIFIC_PASSWORD --file ./b-darwin-arm64.zip 2>&1) ;
+          REQUEST_UUID=$(echo ${SUBMISSION_INFO} | awk -F ' = ' '/RequestUUID/ {print $2}')
+          xcrun altool --notarization-info $REQUEST_UUID --username $APPLE_ID --password $APP_SPECIFIC_PASSWORD --output-format xml
+          security delete-keychain buildagent || true
+          sleep 300
+
+      - name: Release darwin
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            b-darwin-amd64.zip
+            b-darwin-arm64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    needs: testing
+    name: Build Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v2
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16.5
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Build windows/amd64
+        run: go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b-windows-amd64.exe ./cmd/b/
+      - name: Release windows/amd64
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            bin/**
+            README.md
+            config.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
