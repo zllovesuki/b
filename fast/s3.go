@@ -11,7 +11,6 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/pkg/errors"
-	"go.uber.org/zap"
 )
 
 type S3Config struct {
@@ -22,7 +21,6 @@ type S3Config struct {
 	AccessKey      string
 	AccessSecret   string
 	ForcePathStyle bool
-	Logger         *zap.Logger
 }
 
 func (s S3Config) validate() error {
