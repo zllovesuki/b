@@ -26,7 +26,7 @@ func NewFileFastBackend(dataDir string) (*FileFastBackend, error) {
 
 	info, err := os.Stat(dataDir)
 	if errors.Is(err, os.ErrNotExist) {
-		if err := os.Mkdir(dataDir, 0750); err != nil {
+		if err := os.MkdirAll(dataDir, 0750); err != nil {
 			return nil, errors.New("error creating dataDir")
 		}
 	} else {

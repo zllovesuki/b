@@ -108,35 +108,6 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 	backendMap := map[string]app.Backend{}
 	fastBackendMap := map[string]app.FastBackend{}
 
-	for _, name := range availableBackends {
-		var b app.Backend
-		enabled := cfg.Bool(fmt.Sprintf("backend.%s.enabled", name), false)
-		switch name {
-		case "redis":
-			if !enabled {
-				continue
-			}
-			addr := cfg.String("backend.redis.addr")
-			b, err = backend.NewRedisBackend(addr)
-			if err != nil {
-				return nil, err
-			}
-		case "sqlite":
-			if !enabled {
-				continue
-			}
-			path := cfg.String("backend.sqlite.path")
-			b, err = backend.NewSQLiteBackend(path)
-			if err != nil {
-				return nil, err
-			}
-		}
-		if b == nil {
-			continue
-		}
-		backendMap[name] = b
-	}
-
 	for _, name := range availableFastBackends {
 		var f app.FastBackend
 		enabled := cfg.Bool(fmt.Sprintf("fastbackend.%s.enabled", name), false)
@@ -167,6 +138,35 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 			continue
 		}
 		fastBackendMap[name] = f
+	}
+
+	for _, name := range availableBackends {
+		var b app.Backend
+		enabled := cfg.Bool(fmt.Sprintf("backend.%s.enabled", name), false)
+		switch name {
+		case "redis":
+			if !enabled {
+				continue
+			}
+			addr := cfg.String("backend.redis.addr")
+			b, err = backend.NewRedisBackend(addr)
+			if err != nil {
+				return nil, err
+			}
+		case "sqlite":
+			if !enabled {
+				continue
+			}
+			path := cfg.String("backend.sqlite.path")
+			b, err = backend.NewSQLiteBackend(path)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if b == nil {
+			continue
+		}
+		backendMap[name] = b
 	}
 
 	if backendMap[fm] == nil {

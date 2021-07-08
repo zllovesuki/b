@@ -28,13 +28,15 @@ Sometimes you just want to show off the shortest domain you own and let everyone
 
 # Configuration
 
-Currently the MVP is hard coded to use:
+Please see `config.yaml` for reference.
 
-1. file hosting: metadata on redis, actual storage on disk
-2. link shortening: redis
-3. text sharing: redis
+# How to run
 
-And the baseURL is also hard coded to use `http://127.0.0.1:3000`
+`./bin/b.exe -config config.yaml`
+
+The default `config.yaml` should be sufficient for most use cases.
+
+# TODO
 
 In a future version it is planned to add:
 
@@ -58,6 +60,8 @@ Disclaimer: I mainly test on Windows, and Github Actions test on ubuntu. macOS i
 
 # How to build
 
-`go build -tags osusergo,netgo -ldflags="-extldflags=-static -s -w" -o bin/b.exe ./cmd/b/`
+`go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b.exe ./cmd/b/`
 
 This will build `b` in `bin/b.exe` with stripped debug info, and statically without dynamically linked libs.
+
+For building on macOS host (amd64/arm64), remove `-extldflags -static`.
