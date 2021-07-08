@@ -1,0 +1,32 @@
+backend:
+  redis:
+    enabled: false
+    addr: 127.0.0.1:6379
+  sqlite:
+    enabled: true
+    path: data/bfast.db
+
+fastbackend:
+  file:
+    enabled: true
+    path: data/files
+  s3:
+    enabled: false
+    endpoint: 127.0.0.1:9000
+    region: us-east-1
+    bucket: bfast
+    accessKey: minioadmin
+    accessSecret: minioadmin
+    disableSSL: true
+    forcePathStyle: true
+
+service:
+  port: 3000
+  baseURL: http://127.0.0.1:3000
+  file:
+    metadata_backend: sqlite
+    file_backend: file
+  link:
+    backend: sqlite
+  text:
+    backend: sqlite

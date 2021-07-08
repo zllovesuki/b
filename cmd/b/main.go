@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/zllovesuki/b/backend"
 	"github.com/zllovesuki/b/box"
-	"github.com/zllovesuki/b/fast"
 	"github.com/zllovesuki/b/service"
 	"github.com/zllovesuki/b/service/file"
 	"github.com/zllovesuki/b/service/index"
@@ -17,11 +20,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/docgen"
 	"go.uber.org/zap"
 )
 
-var routes = flag.Bool("routes", false, "Generate router documentation")
+var configPath = flag.String("config", "config.yaml", "path to config.yaml")
 
 func main() {
 	flag.Parse()
@@ -34,13 +36,9 @@ func main() {
 	asset := box.GetAssetExtractor()
 	defer asset.Close()
 
-	// b, err := backend.NewRedisBackend("127.0.0.1:6379")
-	// if err != nil {
-	// 	logger.Fatal("unable to connect to redis", zap.Error(err))
-	// }
-	b, err := backend.NewSQLiteBackend("bfast.db")
+	dep, err := getConfig(logger, *configPath)
 	if err != nil {
-		logger.Fatal("unable to open sqlite database")
+		logger.Fatal("getting configured dependencies", zap.Error(err))
 	}
 
 	index, err := index.NewService(index.Options{
@@ -52,8 +50,8 @@ func main() {
 	}
 
 	l, err := link.NewService(link.Options{
-		BaseURL: "http://127.0.0.1:3000",
-		Backend: b,
+		BaseURL: dep.BaseURL,
+		Backend: dep.LinkServiceBackend,
 		Logger:  logger,
 	})
 	if err != nil {
@@ -61,35 +59,18 @@ func main() {
 	}
 
 	t, err := text.NewService(text.Options{
-		BaseURL: "http://127.0.0.1:3000",
-		Backend: b,
+		BaseURL: dep.BaseURL,
+		Backend: dep.TextServiceBackend,
 		Logger:  logger,
 	})
 	if err != nil {
 		logger.Fatal("unable to get text service", zap.Error(err))
 	}
 
-	s, err := fast.NewFileFastBackend("data")
-	if err != nil {
-		logger.Fatal("unable to get file fast backend", zap.Error(err))
-	}
-	// s, err := fast.NewS3FastBackend(fast.S3Config{
-	// 	Bucket:         "bfast",
-	// 	Endpoint:       "127.0.0.1:9000",
-	// 	Region:         "us-east-1",
-	// 	AccessKey:      "minioadmin",
-	// 	AccessSecret:   "minioadmin",
-	// 	DisableSSL:     true,
-	// 	ForcePathStyle: true,
-	// })
-	// if err != nil {
-	// 	logger.Fatal("unable to get s3 fast backend", zap.Error(err))
-	// }
-
 	f, err := file.NewService(file.Options{
-		BaseURL:         "http://127.0.0.1:3000",
-		MetadataBackend: b,
-		FileBackend:     s,
+		BaseURL:         dep.BaseURL,
+		MetadataBackend: dep.FileServiceMetadataBackend,
+		FileBackend:     dep.FileServiceFastBackend,
 		Logger:          logger,
 	})
 	if err != nil {
@@ -115,10 +96,32 @@ func main() {
 	l.RetrieveRoute(r)
 	t.RetrieveRoute(r)
 
-	if *routes {
-		fmt.Println(docgen.JSONRoutesDoc(r))
-		return
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%s", dep.Port),
+		Handler: r,
 	}
 
-	http.ListenAndServe(":3000", r)
+	go func() {
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			logger.Fatal("failed to listen for connection", zap.Error(err))
+		}
+	}()
+
+	sugar := logger.Sugar()
+
+	sugar.Infof("listening for connection on port %s", dep.Port)
+	<-sigs
+	sugar.Info("stopping server")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Fatal("failed to shutdown gracefully", zap.Error(err))
+	}
+
+	sugar.Info("exited gracefully")
 }
