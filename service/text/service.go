@@ -1,7 +1,6 @@
 package text
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -92,9 +91,8 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	// TODO(zllovesuki): Consider using FastBackend
 	text, err := s.Backend.Retrieve(r.Context(), prefix+id)
 	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
-		w.WriteHeader(http.StatusNotFound)
-		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprintf(w, "text not found")
+		response.WriteError(w, r, response.ErrNotFound().AddMessages("Text paste either expired or not found"))
+		return
 	} else if err != nil {
 		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve text paste"))

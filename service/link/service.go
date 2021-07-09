@@ -2,7 +2,6 @@ package link
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/zllovesuki/b/app"
@@ -90,9 +89,7 @@ func (s *Service) retrieveLink(w http.ResponseWriter, r *http.Request) {
 
 	long, err := s.Backend.Retrieve(r.Context(), prefix+id)
 	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
-		w.WriteHeader(http.StatusNotFound)
-		w.Header().Set("Content-Type", "text/plain")
-		fmt.Fprintf(w, "link not found")
+		response.WriteError(w, r, response.ErrNotFound().AddMessages("Link either expired or not found"))
 		return
 	} else if err != nil {
 		s.Logger.Error("unable to retrieve from backend", zap.Error(err), zap.String("id", id))

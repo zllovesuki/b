@@ -26,8 +26,8 @@ import (
 
 type testDependencies struct {
 	baseURL             string
-	mockMetadataBackend *app.MockBackend
-	mockFileBackend     *app.MockFastBackend
+	mockMetadataBackend *app.MockRemovableBackend
+	mockFileBackend     *app.MockRemovableFastBackend
 	recorder            *httptest.ResponseRecorder
 	service             *Service
 	testFile            *os.File
@@ -35,8 +35,8 @@ type testDependencies struct {
 
 func getFixtures(t *testing.T) (*testDependencies, func()) {
 	ctrl := gomock.NewController(t)
-	mockFileBackend := app.NewMockFastBackend(ctrl)
-	mockMetadataBackend := app.NewMockBackend(ctrl)
+	mockFileBackend := app.NewMockRemovableFastBackend(ctrl)
+	mockMetadataBackend := app.NewMockRemovableBackend(ctrl)
 
 	recorder := httptest.NewRecorder()
 
@@ -417,6 +417,14 @@ func TestSaveFile(t *testing.T) {
 			Save(gomock.Any(), filePrefix+id, gomock.Any()).
 			Return(int64(0), fmt.Errorf("error"))
 
+		// since upload path has encountered an error, clean up
+		dep.mockMetadataBackend.EXPECT().
+			Delete(gomock.Any(), metaPrefix+id).
+			Return(nil)
+		dep.mockFileBackend.EXPECT().
+			Delete(gomock.Any(), filePrefix+id).
+			Return(nil)
+
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
@@ -454,6 +462,14 @@ func TestSaveFile(t *testing.T) {
 		dep.mockMetadataBackend.EXPECT().
 			Save(gomock.Any(), metaPrefix+id, buf).
 			Return(app.ErrConflict)
+
+		// since upload path has encountered an error, clean up
+		dep.mockMetadataBackend.EXPECT().
+			Delete(gomock.Any(), metaPrefix+id).
+			Return(nil)
+		dep.mockFileBackend.EXPECT().
+			Delete(gomock.Any(), filePrefix+id).
+			Return(nil)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 

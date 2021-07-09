@@ -20,8 +20,8 @@ var (
 )
 
 type dependencies struct {
-	FileServiceMetadataBackend app.Backend
-	FileServiceFastBackend     app.FastBackend
+	FileServiceMetadataBackend app.RemovableBackend
+	FileServiceFastBackend     app.RemovableFastBackend
 	LinkServiceBackend         app.Backend
 	TextServiceBackend         app.Backend
 	BaseURL                    string
@@ -105,11 +105,11 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 		return nil, errors.New("please specify a service port")
 	}
 
-	backendMap := map[string]app.Backend{}
-	fastBackendMap := map[string]app.FastBackend{}
+	backendMap := map[string]app.RemovableBackend{}
+	fastBackendMap := map[string]app.RemovableFastBackend{}
 
 	for _, name := range availableFastBackends {
-		var f app.FastBackend
+		var f app.RemovableFastBackend
 		enabled := cfg.Bool(fmt.Sprintf("fastbackend.%s.enabled", name), false)
 		switch name {
 		case "file":
@@ -141,7 +141,7 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 	}
 
 	for _, name := range availableBackends {
-		var b app.Backend
+		var b app.RemovableBackend
 		enabled := cfg.Bool(fmt.Sprintf("backend.%s.enabled", name), false)
 		switch name {
 		case "redis":

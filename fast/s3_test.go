@@ -53,8 +53,6 @@ func TestS3FastBackend(t *testing.T) {
 		written, err := dep.f.Save(context.Background(), key, dep.file())
 		require.NoError(t, err)
 
-		t.Log(written)
-
 		r, err := dep.f.Retrieve(context.Background(), key)
 		require.NoError(t, err)
 		defer r.Close()
@@ -182,4 +180,8 @@ func TestS3Delete(t *testing.T) {
 
 	_, err = dep.f.Retrieve(context.Background(), key)
 	require.ErrorIs(t, err, app.ErrNotFound)
+
+	// deleting non-existent identifier should be noop
+	err = dep.f.Delete(context.Background(), randomString(16))
+	require.NoError(t, err)
 }

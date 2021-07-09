@@ -2,10 +2,14 @@ package file
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
@@ -23,8 +27,8 @@ const (
 
 type Options struct {
 	BaseURL         string
-	MetadataBackend app.Backend
-	FileBackend     app.FastBackend
+	MetadataBackend app.RemovableBackend
+	FileBackend     app.RemovableFastBackend
 	Logger          *zap.Logger
 }
 
@@ -69,12 +73,11 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 
 	m, err := s.MetadataBackend.Retrieve(r.Context(), metaPrefix+id)
 	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
-		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(w, "file not found")
+		response.WriteError(w, r, response.ErrNotFound().AddMessages("File either expired or does not exist"))
 		return
 	} else if err != nil {
 		s.Logger.Error("unable to retrieve from metadata backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file metadata"))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata backend"))
 		return
 	}
 
@@ -89,11 +92,11 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	fileReader, err := s.FileBackend.Retrieve(r.Context(), filePrefix+id)
 	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
 		s.Logger.Error("file backend returned not found when metadata exists", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata"))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata backend"))
 		return
 	} else if err != nil {
 		s.Logger.Error("unable to retrieve from file backend", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve file"))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata backend"))
 		return
 	}
 
@@ -101,13 +104,17 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
 	w.Header().Set("Content-Type", meta.ContentType)
 	w.Header().Set("Content-Length", meta.Size)
+	// TODO(zllovesuki): This fails on macOS with Firefox (server has closed the connection)
 	io.Copy(w, app.NewCtxReader(r.Context(), fileReader))
 }
 
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	form, err := r.MultipartReader()
+	var err error
+
+	var form *multipart.Reader
+	form, err = r.MultipartReader()
 	if err != nil {
 		response.WriteError(w, r, response.ErrBadRequest().AddMessages("request is not multipart"))
 		return
@@ -125,7 +132,8 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p, err := form.NextPart()
+	var p *multipart.Part
+	p, err = form.NextPart()
 	if err != nil && err != io.EOF {
 		s.Logger.Error("unable to read next part from multipart reader", zap.Error(err))
 		response.WriteError(w, r, response.ErrUnexpected())
@@ -137,15 +145,41 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var buf []byte
 	file := bufio.NewReader(p)
-	sniff, err := file.Peek(512)
+	buf, err = file.Peek(512)
 	if err != nil {
 		response.WriteError(w, r, response.ErrBadRequest().AddMessages("invalid file found"))
 		return
 	}
-	contentType := http.DetectContentType(sniff)
+	contentType := http.DetectContentType(buf)
 
-	written, err := s.FileBackend.Save(r.Context(), filePrefix+id, io.NopCloser(app.NewCtxReader(r.Context(), file)))
+	// we will check if we encoutered any error during upload path and clean up
+	defer func() {
+		if err == nil {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			if err := s.FileBackend.Delete(ctx, filePrefix+id); err != nil {
+				s.Logger.Error("removing failed upload from file backend", zap.Error(err), zap.String("id", id))
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			if err := s.MetadataBackend.Delete(ctx, metaPrefix+id); err != nil {
+				s.Logger.Error("removing failed upload from metadata backend", zap.Error(err), zap.String("id", id))
+			}
+		}()
+		wg.Wait()
+	}()
+
+	var written int64
+	written, err = s.FileBackend.Save(r.Context(), filePrefix+id, io.NopCloser(app.NewCtxReader(r.Context(), file)))
 	if errors.Is(err, app.ErrConflict) {
 		s.Logger.Error("metadata backend reported no conflict when checking but reported conflict on save", zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
@@ -163,7 +197,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		Size:        fmt.Sprint(written),
 	}
 
-	buf, err := json.Marshal(meta)
+	buf, err = json.Marshal(meta)
 	if err != nil {
 		response.WriteError(w, r, response.ErrUnexpected())
 		return
@@ -171,8 +205,8 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 
 	err = s.MetadataBackend.Save(r.Context(), metaPrefix+id, buf)
 	if errors.Is(err, app.ErrConflict) {
-		s.Logger.Error("conflicting identifier in metadata backend when file backend reports no conflict", zap.Error(err), zap.String("id", id))
-		response.WriteError(w, r, response.ErrUnexpected())
+		s.Logger.Error("conflicting identifier in metadata backend when previous lookup reports no conflict", zap.Error(err), zap.String("id", id))
+		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file metadata"))
 		return
 	} else if err != nil {
 		s.Logger.Error("unable to save to metadata backend", zap.Error(err), zap.String("id", id))
