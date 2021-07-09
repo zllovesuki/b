@@ -147,13 +147,22 @@ func TestFileFastBackend(t *testing.T) {
 		key := randomString(16)
 		ttl := time.Second
 
+		path := filepath.Join(p, key)
+
 		_, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl/2)
+		require.NoError(t, err)
+
+		_, err = os.Stat(path)
 		require.NoError(t, err)
 
 		<-time.After(ttl)
 
 		_, err = dep.f.Retrieve(context.Background(), key)
 		require.ErrorIs(t, err, app.ErrExpired)
+
+		// ensure that we delete on access
+		_, err = os.Stat(path)
+		require.ErrorIs(t, err, os.ErrNotExist)
 	})
 }
 

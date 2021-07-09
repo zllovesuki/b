@@ -2,12 +2,16 @@ package fast
 
 import (
 	"context"
+	"crypto/rand"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/minio/minio-go/v7"
 	"github.com/stretchr/testify/require"
 	"github.com/zllovesuki/b/app"
 )
@@ -86,7 +90,7 @@ func TestS3FastBackend(t *testing.T) {
 		src, err := ioutil.ReadAll(dep.file())
 		require.NoError(t, err)
 
-		written, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl*2)
+		written, err := dep.f.SaveTTL(context.Background(), key, dep.file(), ttl*5)
 		require.NoError(t, err)
 
 		<-time.After(ttl)
@@ -143,6 +147,10 @@ func TestS3FastBackend(t *testing.T) {
 
 		require.Equal(t, written, int64(len(saved)))
 		require.Equal(t, src, saved)
+
+		// ensure that the file still exists if not yet expired
+		_, err = dep.f.mc.StatObject(context.Background(), dep.f.config.Bucket, key, minio.StatObjectOptions{})
+		require.NoError(t, err)
 	})
 
 	t.Run("get outside of ttl should expire", func(t *testing.T) {
@@ -159,6 +167,48 @@ func TestS3FastBackend(t *testing.T) {
 
 		_, err = dep.f.Retrieve(context.Background(), key)
 		require.ErrorIs(t, err, app.ErrExpired)
+
+		// ensure that we delete on access
+		_, err = dep.f.mc.StatObject(context.Background(), dep.f.config.Bucket, key, minio.StatObjectOptions{})
+		require.Error(t, err)
+		resp := minio.ToErrorResponse(err)
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("should remove failed partial uploads", func(t *testing.T) {
+		dep, clean := getS3Fixtures(t)
+		defer clean()
+
+		r, w := io.Pipe()
+
+		key := randomString(16)
+		done := make(chan struct{})
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		go func() {
+			_, err := dep.f.Save(ctx, key, r)
+			require.Error(t, err)
+			done <- struct{}{}
+		}()
+
+		go func() {
+			_, err := io.Copy(w, app.NewCtxReader(ctx, rand.Reader))
+			require.Error(t, err)
+		}()
+
+		// simulate closed pipe
+		<-time.After(time.Second * 5)
+		r.Close()
+
+		<-done
+
+		// check if we have partial uploads
+		select {
+		case x := <-dep.f.mc.ListIncompleteUploads(ctx, dep.f.config.Bucket, "", true):
+			require.Empty(t, x.Key, "received incomplete uploads")
+		case <-time.After(time.Second * 5):
+		}
 	})
 }
 

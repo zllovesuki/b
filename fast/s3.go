@@ -98,9 +98,11 @@ func (s *S3FastBackend) Save(c context.Context, identifier string, r io.ReadClos
 func (s *S3FastBackend) SaveTTL(c context.Context, identifier string, r io.ReadCloser, ttl time.Duration) (int64, error) {
 	defer r.Close()
 
+	var err error
 	exist := true
 
-	info, err := s.mc.StatObject(c, s.config.Bucket, identifier, minio.StatObjectOptions{})
+	var info minio.ObjectInfo
+	info, err = s.mc.StatObject(c, s.config.Bucket, identifier, minio.StatObjectOptions{})
 	if err != nil {
 		resp := minio.ToErrorResponse(err)
 		if resp.StatusCode == http.StatusNotFound {
@@ -113,21 +115,35 @@ func (s *S3FastBackend) SaveTTL(c context.Context, identifier string, r io.ReadC
 	if exist {
 		whenStr := info.UserMetadata[metaCreated]
 		ttlStr := info.UserMetadata[metaTTL]
+
 		when, err := time.Parse(time.RFC3339, whenStr)
 		if err != nil {
 			return 0, errors.Wrap(err, "parsing created date")
 		}
+
 		exp, err := time.ParseDuration(ttlStr)
 		if err != nil {
 			return 0, errors.Wrap(err, "parsing ttl")
 		}
+
 		if exp == 0 || time.Now().UTC().Before(when.UTC().Add(exp)) {
 			return 0, app.ErrConflict
 		}
 	}
 
-	u, err := s.mc.PutObject(c, s.config.Bucket, identifier, r, -1, minio.PutObjectOptions{
-		PartSize: 16 << 20, // 16MiB
+	defer func() {
+		if err == nil {
+			return
+		}
+		// clean up failed partials upload
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+		s.mc.RemoveIncompleteUpload(ctx, s.config.Bucket, identifier)
+	}()
+
+	var u minio.UploadInfo
+	u, err = s.mc.PutObject(c, s.config.Bucket, identifier, r, -1, minio.PutObjectOptions{
+		PartSize: 8 << 20, // 8MiB
 		UserMetadata: map[string]string{
 			metaCreated: time.Now().UTC().Format(time.RFC3339),
 			metaTTL:     ttl.String(),
@@ -153,15 +169,25 @@ func (s *S3FastBackend) Retrieve(c context.Context, identifier string) (io.ReadC
 
 	whenStr := info.UserMetadata[metaCreated]
 	ttlStr := info.UserMetadata[metaTTL]
+
 	when, err := time.Parse(time.RFC3339, whenStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing created date")
 	}
+
 	exp, err := time.ParseDuration(ttlStr)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing ttl")
 	}
-	if exp != 0 && time.Now().UTC().After(when.UTC().Add(exp)) {
+
+	expired := exp != 0 && time.Now().UTC().After(when.UTC().Add(exp))
+	defer func() {
+		if expired {
+			// delete on access
+			s.Delete(c, identifier)
+		}
+	}()
+	if expired {
 		return nil, app.ErrExpired
 	}
 

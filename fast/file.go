@@ -93,22 +93,35 @@ func (f *FileFastBackend) SaveTTL(c context.Context, identifier string, r io.Rea
 func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.ReadCloser, error) {
 	p := filepath.Join(f.dataDir, identifier)
 
-	file, err := os.OpenFile(p, os.O_RDONLY, 0600)
+	var err error
+	var expired bool
+
+	var file *os.File
+	file, err = os.OpenFile(p, os.O_RDONLY, 0600)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, app.ErrNotFound
 		}
 		return nil, errors.Wrap(err, "cannot open file")
 	}
+	defer func() {
+		if err != nil || expired {
+			// close on error or expiration
+			file.Close()
+		}
+		if expired {
+			// then compaction on access
+			// TODO(zllovesuki): investigate and see if this makes sense.
+			// this may fail if there are inflight requests downloading the file
+			os.Remove(p)
+		}
+	}()
 
-	ex, err := app.TTLExceeded(file)
+	expired, err = app.TTLExceeded(file)
 	if err != nil {
 		return nil, errors.Wrap(err, "error checking ttl of the file")
 	}
-
-	if ex {
-		// compaction on access
-		defer os.Remove(p)
+	if expired {
 		return nil, app.ErrExpired
 	}
 
