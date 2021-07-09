@@ -27,8 +27,7 @@ type Backend interface {
 	Retrieve(c context.Context, identifier string) ([]byte, error)
 }
 
-// FastBackend is similar to Backend, except that it utilizes io.ReadCloser/io.WriteCloser
-// to minimize buffering
+// FastBackend is similar to Backend, except that it utilizes io.ReadCloser to minimize buffering
 type FastBackend interface {
 	Save(c context.Context, identifier string, r io.ReadCloser) (int64, error)
 	SaveTTL(c context.Context, identifier string, r io.ReadCloser, ttl time.Duration) (int64, error)

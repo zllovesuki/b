@@ -23,7 +23,7 @@ type dependencies struct {
 	FileServiceMetadataBackend app.RemovableBackend
 	FileServiceFastBackend     app.RemovableFastBackend
 	LinkServiceBackend         app.Backend
-	TextServiceBackend         app.Backend
+	TextServiceBackend         app.FastBackend
 	BaseURL                    string
 	Port                       string
 }
@@ -65,7 +65,7 @@ func verifyBackendConfigured(fm, f, l, t string) error {
 	if !contains(availableBackends, l) {
 		return errors.New("please configure a valid backend for link service")
 	}
-	if !contains(availableBackends, t) {
+	if !contains(availableFastBackends, t) {
 		return errors.New("please configure a valid backend for text service")
 	}
 	return nil
@@ -178,7 +178,7 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 	if backendMap[l] == nil {
 		return nil, errors.New("backend not configured for link service")
 	}
-	if backendMap[t] == nil {
+	if fastBackendMap[t] == nil {
 		return nil, errors.New("backend not configured for text service")
 	}
 
@@ -186,7 +186,7 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 	log.Infof("metadata backend for file service configured with %T", backendMap[fm])
 	log.Infof("file backend for file service configured with %T", fastBackendMap[f])
 	log.Infof("backend for link service configured with %T", backendMap[l])
-	log.Infof("backend for text service configured with %T", backendMap[t])
+	log.Infof("backend for text service configured with %T", fastBackendMap[t])
 
 	return &dependencies{
 		Port:                       port,
@@ -194,6 +194,6 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 		FileServiceMetadataBackend: backendMap[fm],
 		FileServiceFastBackend:     fastBackendMap[f],
 		LinkServiceBackend:         backendMap[l],
-		TextServiceBackend:         backendMap[t],
+		TextServiceBackend:         fastBackendMap[t],
 	}, nil
 }

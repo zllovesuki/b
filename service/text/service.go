@@ -1,14 +1,15 @@
 package text
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
 	"github.com/zllovesuki/b/service"
 
-	"github.com/buger/jsonparser"
 	"github.com/go-chi/chi/v5"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -20,7 +21,7 @@ const (
 
 type Options struct {
 	BaseURL string
-	Backend app.Backend
+	Backend app.FastBackend
 	Logger  *zap.Logger
 }
 
@@ -50,29 +51,24 @@ func NewService(option Options) (*Service, error) {
 	}, nil
 }
 
-// for reference
-type SaveTextReq struct {
-	Text string `json:"text"`
-}
-
 func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	ttlStr := chi.URLParam(r, "ttl")
+	var ttl int64
+	if ttlStr != "" {
+		// this should already be validated at router level (only numbers are allowed)
+		ttl, _ = strconv.ParseInt(ttlStr, 10, 64)
+	}
 
-	// TODO(zllovesuki): Consider using FastBackend
-	buf, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		s.Logger.Error("unable to buffer request json", zap.Error(err))
-		response.WriteError(w, r, response.ErrUnexpected())
+	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
+		response.WriteError(w, r, response.ErrBadRequest().
+			AddMessages("Request content-type is not application/x-www-form-urlencoded").
+			AddMessages("If you are using curl, please use the following command:").
+			AddMessages("cat foo.txt | curl --data-binary @- http://example.com/t-foo"))
 		return
 	}
 
-	ret, err := jsonparser.GetString(buf, "text")
-	if err != nil {
-		response.WriteError(w, r, response.ErrInvalidJson())
-		return
-	}
-
-	err = s.Backend.Save(r.Context(), prefix+id, []byte(ret))
+	_, err := s.Backend.SaveTTL(r.Context(), prefix+id, r.Body, time.Second*time.Duration(ttl))
 	if errors.Is(err, app.ErrConflict) {
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 		return
@@ -88,7 +84,6 @@ func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	// TODO(zllovesuki): Consider using FastBackend
 	text, err := s.Backend.Retrieve(r.Context(), prefix+id)
 	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
 		response.WriteError(w, r, response.ErrNotFound().AddMessages("Text paste either expired or not found"))
@@ -98,9 +93,10 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to retrieve text paste"))
 		return
 	}
+	defer text.Close()
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write(text)
+	io.Copy(w, text)
 }
 
 // SaveRoute returns a mountable router for saving text paste.
@@ -110,6 +106,7 @@ func (s *Service) SaveRoute(r chi.Router) http.Handler {
 		r = chi.NewRouter()
 	}
 
+	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}/{ttl:[0-9]+}"), s.saveText)
 	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveText)
 
 	return r

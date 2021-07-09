@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
@@ -20,14 +22,14 @@ import (
 
 type testDependencies struct {
 	baseURL     string
-	mockBackend *app.MockBackend
+	mockBackend *app.MockFastBackend
 	recorder    *httptest.ResponseRecorder
 	service     *Service
 }
 
 func getFixtures(t *testing.T) (*testDependencies, func()) {
 	ctrl := gomock.NewController(t)
-	mockBackend := app.NewMockBackend(ctrl)
+	mockBackend := app.NewMockFastBackend(ctrl)
 
 	recorder := httptest.NewRecorder()
 
@@ -58,14 +60,15 @@ func TestGetText(t *testing.T) {
 		defer finish()
 
 		id := "hello"
-		ret := []byte("hello world!")
+		txt := []byte("hello world")
+		ret := bytes.NewBuffer(txt)
 
 		r, err := http.NewRequest("GET", service.Prefix(prefix, id), nil)
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
 			Retrieve(gomock.Any(), prefix+id).
-			Return([]byte(ret), nil)
+			Return(io.NopCloser(ret), nil)
 
 		dep.service.RetrieveRoute(nil).ServeHTTP(dep.recorder, r)
 
@@ -74,7 +77,7 @@ func TestGetText(t *testing.T) {
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		buf, err := ioutil.ReadAll(resp.Body)
 		require.NoError(t, err)
-		require.Equal(t, ret, buf)
+		require.Equal(t, txt, buf)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -140,20 +143,17 @@ func TestSaveText(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
 
-		req := SaveTextReq{
-			Text: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		}
+		txt := []byte("hello world")
+		body := bytes.NewReader(txt)
 		id := "wqrewr"
 
-		body, err := json.Marshal(req)
-		require.NoError(t, err)
-
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), body)
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), prefix+id, []byte(req.Text)).
-			Return(nil)
+			SaveTTL(gomock.Any(), prefix+id, r.Body, time.Duration(0)).
+			Return(int64(len(txt)), nil)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
@@ -170,20 +170,16 @@ func TestSaveText(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
 
-		req := SaveTextReq{
-			Text: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		}
-		id := "hello"
-
-		body, err := json.Marshal(req)
-		require.NoError(t, err)
-
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
+		txt := []byte("hello world")
+		body := bytes.NewReader(txt)
+		id := "wqrewr"
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), body)
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), prefix+id, []byte(req.Text)).
-			Return(app.ErrConflict)
+			SaveTTL(gomock.Any(), prefix+id, r.Body, time.Duration(0)).
+			Return(int64(0), app.ErrConflict)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
@@ -195,20 +191,16 @@ func TestSaveText(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
 
-		req := SaveTextReq{
-			Text: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
-		}
-		id := "hello"
-
-		body, err := json.Marshal(req)
-		require.NoError(t, err)
-
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
+		txt := []byte("hello world")
+		body := bytes.NewReader(txt)
+		id := "wqrewr"
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), body)
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), prefix+id, []byte(req.Text)).
-			Return(fmt.Errorf("error"))
+			SaveTTL(gomock.Any(), prefix+id, r.Body, time.Duration(0)).
+			Return(int64(0), fmt.Errorf("error"))
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
@@ -223,6 +215,7 @@ func TestSaveText(t *testing.T) {
 		id := "../../../etc/hello"
 
 		r, err := http.NewRequest("POST", service.Prefix(prefix, id), nil)
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
@@ -231,5 +224,67 @@ func TestSaveText(t *testing.T) {
 
 		require.Equal(t, http.StatusNotFound, resp.StatusCode)
 
+	})
+
+	t.Run("should reject non x-www-form-urlencoded request", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "wqrewr"
+		thing := struct {
+			Text string
+		}{
+			Text: "hi",
+		}
+		buf, err := json.Marshal(&thing)
+		require.NoError(t, err)
+
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(buf))
+		r.Header.Add("Content-Type", "application/json")
+		require.NoError(t, err)
+
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("ttl request should be validated at router level", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		r, err := http.NewRequest("POST", service.Prefix(prefix, "id/abce"), nil)
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		require.NoError(t, err)
+
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("ttl request should work", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		ttl := 60
+		txt := []byte("hello world")
+		body := bytes.NewReader(txt)
+		id := "wqrewr"
+		r, err := http.NewRequest("POST", service.Prefix(prefix, fmt.Sprintf("%s/%d", id, ttl)), body)
+		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+		require.NoError(t, err)
+
+		dep.mockBackend.EXPECT().
+			SaveTTL(gomock.Any(), prefix+id, r.Body, time.Second*time.Duration(ttl)).
+			Return(int64(len(txt)), nil)
+
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 }
