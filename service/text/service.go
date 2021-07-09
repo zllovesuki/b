@@ -3,7 +3,6 @@ package text
 import (
 	"io"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/zllovesuki/b/app"
@@ -53,12 +52,7 @@ func NewService(option Options) (*Service, error) {
 
 func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	ttlStr := chi.URLParam(r, "ttl")
-	var ttl int64
-	if ttlStr != "" {
-		// this should already be validated at router level (only numbers are allowed)
-		ttl, _ = strconv.ParseInt(ttlStr, 10, 64)
-	}
+	ttl := service.ParseTTL(r)
 
 	if r.Header.Get("Content-Type") != "application/x-www-form-urlencoded" {
 		response.WriteError(w, r, response.ErrBadRequest().

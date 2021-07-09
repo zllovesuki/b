@@ -3,6 +3,7 @@ package link
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
@@ -56,8 +57,10 @@ type SaveLinkReq struct {
 
 func (s *Service) saveLink(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	ttl := service.ParseTTL(r)
 
 	var req SaveLinkReq
+	r.Body = http.MaxBytesReader(w, r.Body, 3192) // only read upto 3kb
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		response.WriteError(w, r, response.ErrInvalidJson())
@@ -71,7 +74,7 @@ func (s *Service) saveLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.Backend.Save(r.Context(), prefix+id, []byte(req.URL))
+	err = s.Backend.SaveTTL(r.Context(), prefix+id, []byte(req.URL), time.Second*time.Duration(ttl))
 	if errors.Is(err, app.ErrConflict) {
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 		return
@@ -107,6 +110,7 @@ func (s *Service) SaveRoute(r chi.Router) http.Handler {
 		r = chi.NewRouter()
 	}
 
+	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}/{ttl:[0-9]+}"), s.saveLink)
 	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveLink)
 
 	return r

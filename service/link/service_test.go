@@ -2,11 +2,14 @@ package link
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
@@ -132,7 +135,7 @@ func TestSaveLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), prefix+id, []byte(req.URL)).
+			SaveTTL(gomock.Any(), prefix+id, []byte(req.URL), time.Duration(0)).
 			Return(nil)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
@@ -183,7 +186,7 @@ func TestSaveLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), prefix+id, []byte(req.URL)).
+			SaveTTL(gomock.Any(), prefix+id, []byte(req.URL), time.Duration(0)).
 			Return(app.ErrConflict)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
@@ -208,12 +211,75 @@ func TestSaveLink(t *testing.T) {
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
-			Save(gomock.Any(), prefix+id, []byte(req.URL)).
+			SaveTTL(gomock.Any(), prefix+id, []byte(req.URL), time.Duration(0)).
 			Return(fmt.Errorf("error"))
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
 
 		resp := dep.recorder.Result()
 		require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("ttl request should be validated at router level", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		r, err := http.NewRequest("POST", service.Prefix(prefix, "id/aewrw"), nil)
+		require.NoError(t, err)
+
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("ttl request should work", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		ttl := 60
+		id := "hello"
+		req := SaveLinkReq{
+			URL: "https://google.com",
+		}
+
+		body, err := json.Marshal(req)
+		require.NoError(t, err)
+
+		r, err := http.NewRequest("POST", service.Prefix(prefix, fmt.Sprintf("%s/%d", id, ttl)), bytes.NewBuffer(body))
+		require.NoError(t, err)
+
+		dep.mockBackend.EXPECT().
+			SaveTTL(gomock.Any(), prefix+id, []byte(req.URL), time.Second*time.Duration(ttl)).
+			Return(nil)
+
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+	})
+
+	t.Run("should reject large client payload", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		length := 4096
+		payload := make([]byte, length)
+		read, err := io.ReadFull(rand.Reader, payload)
+		require.NoError(t, err)
+		require.Equal(t, length, read)
+
+		id := "hello"
+
+		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(payload))
+		require.NoError(t, err)
+
+		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 }
