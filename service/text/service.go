@@ -2,10 +2,14 @@ package text
 
 import (
 	"io"
+	"io/ioutil"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/zllovesuki/b/app"
+	"github.com/zllovesuki/b/box"
 	"github.com/zllovesuki/b/response"
 	"github.com/zllovesuki/b/service"
 
@@ -20,17 +24,23 @@ const (
 
 type Options struct {
 	BaseURL string
+	Asset   box.AssetExtractor
 	Backend app.FastBackend
 	Logger  *zap.Logger
 }
 
 type Service struct {
 	Options
+	head []byte
+	foot []byte
 }
 
 func (o *Options) validate() error {
 	if o.BaseURL == "" {
 		return errors.New("baseurl cannot be empty")
+	}
+	if o.Asset == nil {
+		return errors.New("missing asset extractor")
 	}
 	if o.Backend == nil {
 		return errors.New("missing backend")
@@ -45,8 +55,36 @@ func NewService(option Options) (*Service, error) {
 	if err := option.validate(); err != nil {
 		return nil, err
 	}
+	h := option.Asset.Get("/highlightHead.html")
+	f := option.Asset.Get("/highlightFoot.html")
+	if h == "" || f == "" {
+		return nil, errors.New("unable to extract highlight.html")
+	}
+	head, err := os.Open(h)
+	if err != nil {
+		return nil, errors.Wrap(err, "opening highlightHead.html")
+	}
+	defer head.Close()
+
+	foot, err := os.Open(f)
+	if err != nil {
+		return nil, errors.Wrap(err, "opening highlightFoot.html")
+	}
+	defer foot.Close()
+
+	b, err := ioutil.ReadAll(head)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading head into buffer")
+	}
+	c, err := ioutil.ReadAll(foot)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading foot into buffer")
+	}
+
 	return &Service{
 		Options: option,
+		head:    b,
+		foot:    c,
 	}, nil
 }
 
@@ -77,6 +115,7 @@ func (s *Service) saveText(w http.ResponseWriter, r *http.Request) {
 
 func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	html := strings.HasSuffix(r.RequestURI, ".html")
 
 	text, err := s.Backend.Retrieve(r.Context(), prefix+id)
 	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
@@ -89,8 +128,19 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	}
 	defer text.Close()
 
-	w.Header().Set("Content-Type", "text/plain")
-	io.Copy(w, text)
+	var wDst io.Writer
+	if html {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(s.head)
+		wDst = service.NewHTMLEscapeWriter(w)
+		defer w.Write(s.foot)
+	} else {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		wDst = w
+	}
+	if _, err := io.Copy(wDst, text); err != nil {
+		s.Logger.Warn("piping buffer", zap.Error(err))
+	}
 }
 
 // SaveRoute returns a mountable router for saving text paste.
@@ -113,6 +163,7 @@ func (s *Service) RetrieveRoute(r chi.Router) http.Handler {
 		r = chi.NewRouter()
 	}
 
+	r.Get(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}.html"), s.retrieveText)
 	r.Get(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.retrieveText)
 
 	return r

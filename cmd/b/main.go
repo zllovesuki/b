@@ -60,6 +60,7 @@ func main() {
 
 	t, err := text.NewService(text.Options{
 		BaseURL: dep.BaseURL,
+		Asset:   asset,
 		Backend: dep.TextServiceBackend,
 		Logger:  logger,
 	})
