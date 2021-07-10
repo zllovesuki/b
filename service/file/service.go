@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"sync"
@@ -101,11 +102,14 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer fileReader.Close()
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s", meta.Filename))
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": meta.Filename}))
 	w.Header().Set("Content-Type", meta.ContentType)
 	w.Header().Set("Content-Length", meta.Size)
 	// TODO(zllovesuki): This fails on macOS with Firefox (server has closed the connection)
-	io.Copy(w, app.NewCtxReader(r.Context(), fileReader))
+	written, err := io.Copy(w, app.NewCtxReader(r.Context(), fileReader))
+	if err != nil {
+		s.Logger.Warn("piping file buffer", zap.Error(err), zap.Int64("bytes-written", written))
+	}
 }
 
 func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {

@@ -138,8 +138,8 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		wDst = w
 	}
-	if _, err := io.Copy(wDst, text); err != nil {
-		s.Logger.Warn("piping buffer", zap.Error(err))
+	if w, err := io.Copy(wDst, text); err != nil {
+		s.Logger.Warn("piping text buffer", zap.Error(err), zap.Int64("bytes-written", w))
 	}
 }
 

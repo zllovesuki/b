@@ -220,7 +220,6 @@ jobs:
 
       - name: Build windows/amd64
         run: go build -tags "sqlite_omit_load_extension osusergo netgo" -ldflags="-s -w -linkmode external -extldflags '-fno-PIC -static'" -buildmode=pie -o bin/b-windows-amd64.exe ./cmd/b/
-        run: go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b-windows-amd64.exe ./cmd/b/
       - name: Release windows/amd64
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
