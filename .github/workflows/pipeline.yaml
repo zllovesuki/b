@@ -92,7 +92,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build linux/amd64
-        run: CGO_ENABLED=1 go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b-linux-amd64 ./cmd/b/
+        run: go build -tags "sqlite_omit_load_extension osusergo netgo" -ldflags="-s -w -linkmode external -extldflags '-fno-PIC -static'" -buildmode=pie -o bin/b-linux-amd64 ./cmd/b
       - name: Release linux/amd64
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -105,7 +105,7 @@ jobs:
       - name: Install cross-compile toolchains
         run: sudo apt install -y gcc-aarch64-linux-gnu libc-dev-arm64-cross
       - name: Build linux/arm64
-        run: GOARCH=arm64 GOOS=linux CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b-linux-arm64 ./cmd/b/
+        run: GOARCH=arm64 GOOS=linux CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc go build -tags "sqlite_omit_load_extension osusergo netgo" -ldflags="-s -w -linkmode external -extldflags '-fno-PIC -static'" -buildmode=pie -o bin/b-linux-arm64 ./cmd/b
       - name: Release linux/arm64
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
@@ -139,8 +139,8 @@ jobs:
 
       - name: Build darwin
         run: |
-          CGO_ENABLED=1 SDKROOT=$(xcrun --sdk macosx --show-sdk-path) go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external" -o ./b-darwin-amd64 ./cmd/b/
-          GOARCH=arm64 GOOS=darwin CGO_ENABLED=1 SDKROOT=$(xcrun --sdk macosx --show-sdk-path) go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external" -o ./b-darwin-arm64 ./cmd/b/
+          CGO_ENABLED=1 SDKROOT=$(xcrun --sdk macosx --show-sdk-path) go build -tags "sqlite_omit_load_extension osusergo netgo" -ldflags="-s -w -linkmode external -extldflags '-fno-PIC'" -buildmode=pie -o ./b-darwin-amd64 ./cmd/b/
+          GOARCH=arm64 GOOS=darwin CGO_ENABLED=1 SDKROOT=$(xcrun --sdk macosx --show-sdk-path) go build -tags "sqlite_omit_load_extension osusergo netgo" -ldflags="-s -w -linkmode external -extldflags '-fno-PIC'" -buildmode=pie -o ./b-darwin-arm64 ./cmd/b/
 
       - name: Setup Certificate and Sign
         if: startsWith(github.ref, 'refs/tags/')
@@ -175,14 +175,16 @@ jobs:
           /usr/bin/ditto -c -k --keepParent ./b-darwin-amd64 ./b-darwin-amd64.zip ;
           SUBMISSION_INFO=$(xcrun altool --notarize-app --primary-bundle-id=net.miragespace.b -u $APPLE_ID -p $APP_SPECIFIC_PASSWORD --file ./b-darwin-amd64.zip 2>&1) ;
           REQUEST_UUID=$(echo ${SUBMISSION_INFO} | awk -F ' = ' '/RequestUUID/ {print $2}')
+          sleep 10
           xcrun altool --notarization-info $REQUEST_UUID --username $APPLE_ID --password $APP_SPECIFIC_PASSWORD --output-format xml
           # arm64
           /usr/bin/ditto -c -k --keepParent ./b-darwin-arm64 ./b-darwin-arm64.zip ;
           SUBMISSION_INFO=$(xcrun altool --notarize-app --primary-bundle-id=net.miragespace.b -u $APPLE_ID -p $APP_SPECIFIC_PASSWORD --file ./b-darwin-arm64.zip 2>&1) ;
           REQUEST_UUID=$(echo ${SUBMISSION_INFO} | awk -F ' = ' '/RequestUUID/ {print $2}')
+          sleep 10
           xcrun altool --notarization-info $REQUEST_UUID --username $APPLE_ID --password $APP_SPECIFIC_PASSWORD --output-format xml
           security delete-keychain buildagent || true
-          sleep 60
+          sleep 30
 
       - name: Release darwin
         if: startsWith(github.ref, 'refs/tags/')
@@ -217,6 +219,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Build windows/amd64
+        run: go build -tags "sqlite_omit_load_extension osusergo netgo" -ldflags="-s -w -linkmode external -extldflags '-fno-PIC -static'" -buildmode=pie -o bin/b-windows-amd64.exe ./cmd/b/
         run: go build -tags sqlite_omit_load_extension,osusergo,netgo -ldflags="-s -w -linkmode external -extldflags -static" -o bin/b-windows-amd64.exe ./cmd/b/
       - name: Release windows/amd64
         if: startsWith(github.ref, 'refs/tags/')
