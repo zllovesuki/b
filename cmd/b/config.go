@@ -26,6 +26,7 @@ type dependencies struct {
 	TextServiceBackend         app.FastBackend
 	BaseURL                    string
 	Port                       string
+	Close                      func()
 }
 
 func verifyAtLeastOne(cfg *config.Config) error {
@@ -71,6 +72,17 @@ func verifyBackendConfigured(fm, f, l, t string) error {
 	return nil
 }
 
+func closer(logger *zap.Logger, f []func() error) func() {
+	return func() {
+		logger.Info("closing backends")
+		for _, fn := range f {
+			if err := fn(); err != nil {
+				logger.Error("backend returns error on closing", zap.Error(err))
+			}
+		}
+	}
+}
+
 func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 	var err error
 
@@ -107,6 +119,7 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 
 	backendMap := map[string]app.RemovableBackend{}
 	fastBackendMap := map[string]app.RemovableFastBackend{}
+	closeFns := []func() error{}
 
 	for _, name := range availableFastBackends {
 		var f app.RemovableFastBackend
@@ -138,6 +151,7 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 			continue
 		}
 		fastBackendMap[name] = f
+		closeFns = append(closeFns, f.Close)
 	}
 
 	for _, name := range availableBackends {
@@ -167,6 +181,7 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 			continue
 		}
 		backendMap[name] = b
+		closeFns = append(closeFns, b.Close)
 	}
 
 	if backendMap[fm] == nil {
@@ -195,5 +210,6 @@ func getConfig(logger *zap.Logger, configPath string) (*dependencies, error) {
 		FileServiceFastBackend:     fastBackendMap[f],
 		LinkServiceBackend:         backendMap[l],
 		TextServiceBackend:         fastBackendMap[t],
+		Close:                      closer(logger, closeFns),
 	}, nil
 }

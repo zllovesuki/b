@@ -40,6 +40,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("getting configured dependencies", zap.Error(err))
 	}
+	defer dep.Close()
 
 	index, err := index.NewService(index.Options{
 		Logger: logger,
