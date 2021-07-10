@@ -12,8 +12,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
+
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/css"
+	"github.com/tdewolff/minify/v2/html"
+	"github.com/tdewolff/minify/v2/js"
 )
 
 const (
@@ -56,6 +62,11 @@ func main() {
 	// Create map for filenames
 	configs := make(map[string][]byte)
 
+	m := minify.New()
+	m.AddFunc("text/html", html.Minify)
+	m.AddFunc("text/css", css.Minify)
+	m.AddFuncRegexp(regexp.MustCompile("^(application|text)/(x-)?(java|ecma)script$"), js.Minify)
+
 	// Walking through embed directory
 	err := filepath.Walk(embedFolder, func(path string, info os.FileInfo, err error) error {
 		relativePath := filepath.ToSlash(strings.TrimPrefix(path, embedFolder))
@@ -73,6 +84,14 @@ func main() {
 				// If file not reading
 				log.Printf("Error reading %s: %s", path, err)
 				return err
+			}
+
+			if strings.HasSuffix(path, ".html") {
+				bm, err := m.Bytes("text/html", b)
+				if err != nil {
+					log.Printf("error minifying html %s: %s", path, err)
+				}
+				b = bm
 			}
 
 			// Add file name to map
