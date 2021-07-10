@@ -106,7 +106,8 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", meta.ContentType)
 	w.Header().Set("Content-Length", meta.Size)
 	// TODO(zllovesuki): This fails on macOS with Firefox (server has closed the connection)
-	written, err := io.Copy(w, app.NewCtxReader(r.Context(), fileReader))
+	buf := bufio.NewReaderSize(fileReader, 4<<20)
+	written, err := io.Copy(w, app.NewCtxReader(r.Context(), buf))
 	if err != nil {
 		s.Logger.Warn("piping file buffer", zap.Error(err), zap.Int64("bytes-written", written))
 	}
