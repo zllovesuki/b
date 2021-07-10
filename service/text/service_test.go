@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/zllovesuki/b/app"
+	"github.com/zllovesuki/b/box"
 	"github.com/zllovesuki/b/response"
 	"github.com/zllovesuki/b/service"
 
@@ -27,6 +28,8 @@ type testDependencies struct {
 	service     *Service
 }
 
+var asset = box.GetAssetExtractor()
+
 func getFixtures(t *testing.T) (*testDependencies, func()) {
 	ctrl := gomock.NewController(t)
 	mockBackend := app.NewMockFastBackend(ctrl)
@@ -39,6 +42,7 @@ func getFixtures(t *testing.T) (*testDependencies, func()) {
 
 	service, err := NewService(Options{
 		BaseURL: base,
+		Asset:   asset,
 		Backend: mockBackend,
 		Logger:  logger,
 	})
@@ -134,7 +138,35 @@ func TestGetText(t *testing.T) {
 		resp := dep.recorder.Result()
 
 		require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
 
+	t.Run(".html in url should return highlight.js page", func(t *testing.T) {
+		dep, finish := getFixtures(t)
+		defer finish()
+
+		id := "hello"
+		txt := []byte("hello world")
+		ret := bytes.NewBuffer(txt)
+		uri := service.Prefix(prefix, fmt.Sprintf("%s.html", id))
+
+		r, err := http.NewRequest("GET", uri, nil)
+		r.RequestURI = uri // monkey patch
+		require.NoError(t, err)
+
+		dep.mockBackend.EXPECT().
+			Retrieve(gomock.Any(), prefix+id).
+			Return(io.NopCloser(ret), nil)
+
+		dep.service.RetrieveRoute(nil).ServeHTTP(dep.recorder, r)
+
+		resp := dep.recorder.Result()
+
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Equal(t, "text/html; charset=utf-8", resp.Header.Get("Content-Type"))
+
+		buf, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.Contains(t, string(buf), string(txt))
 	})
 }
 
