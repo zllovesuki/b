@@ -128,6 +128,10 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 	return file, nil
 }
 
+func (f *FileFastBackend) Close() error {
+	return nil
+}
+
 func (f *FileFastBackend) Delete(c context.Context, identifier string) error {
 	p := filepath.Join(f.dataDir, identifier)
 

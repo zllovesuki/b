@@ -36,6 +36,20 @@ func (m *MockBackend) EXPECT() *MockBackendMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockBackend) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockBackendMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockBackend)(nil).Close))
+}
+
 // Retrieve mocks base method.
 func (m *MockBackend) Retrieve(arg0 context.Context, arg1 string) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -100,6 +114,20 @@ func NewMockFastBackend(ctrl *gomock.Controller) *MockFastBackend {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockFastBackend) EXPECT() *MockFastBackendMockRecorder {
 	return m.recorder
+}
+
+// Close mocks base method.
+func (m *MockFastBackend) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockFastBackendMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockFastBackend)(nil).Close))
 }
 
 // Retrieve mocks base method.
@@ -207,6 +235,20 @@ func (m *MockRemovableBackend) EXPECT() *MockRemovableBackendMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockRemovableBackend) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockRemovableBackendMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRemovableBackend)(nil).Close))
+}
+
 // Delete mocks base method.
 func (m *MockRemovableBackend) Delete(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
@@ -285,6 +327,20 @@ func NewMockRemovableFastBackend(ctrl *gomock.Controller) *MockRemovableFastBack
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockRemovableFastBackend) EXPECT() *MockRemovableFastBackendMockRecorder {
 	return m.recorder
+}
+
+// Close mocks base method.
+func (m *MockRemovableFastBackend) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockRemovableFastBackendMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRemovableFastBackend)(nil).Close))
 }
 
 // Delete mocks base method.

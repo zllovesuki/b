@@ -25,6 +25,8 @@ type Backend interface {
 	SaveTTL(c context.Context, identifier string, data []byte, ttl time.Duration) error
 	// Retrieve gets the persisted data back
 	Retrieve(c context.Context, identifier string) ([]byte, error)
+	// Close releases resources before exit
+	Close() error
 }
 
 // FastBackend is similar to Backend, except that it utilizes io.ReadCloser to minimize buffering
@@ -32,6 +34,7 @@ type FastBackend interface {
 	Save(c context.Context, identifier string, r io.ReadCloser) (int64, error)
 	SaveTTL(c context.Context, identifier string, r io.ReadCloser, ttl time.Duration) (int64, error)
 	Retrieve(c context.Context, identifier string) (io.ReadCloser, error)
+	Close() error
 }
 
 // Removable is used to remove underlying resources, usually in internal tools

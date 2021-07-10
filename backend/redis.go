@@ -62,6 +62,10 @@ func (b *RedisBackend) Retrieve(c context.Context, identifier string) ([]byte, e
 	}
 }
 
+func (b *RedisBackend) Close() error {
+	return b.cli.Close()
+}
+
 func (b *RedisBackend) Delete(c context.Context, identifier string) error {
 	return b.cli.Del(c, identifier).Err()
 }

@@ -100,3 +100,7 @@ func (a *AESGCM) decrypt(data []byte) ([]byte, error) {
 
 	return c, nil
 }
+
+func (a *AESGCM) Close() error {
+	return a.backend.Close()
+}

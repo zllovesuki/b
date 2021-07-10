@@ -199,6 +199,10 @@ func (s *S3FastBackend) Retrieve(c context.Context, identifier string) (io.ReadC
 	return reader, nil
 }
 
+func (s *S3FastBackend) Close() error {
+	return nil
+}
+
 func (s *S3FastBackend) Delete(c context.Context, identifier string) error {
 	return s.mc.RemoveObject(c, s.config.Bucket, identifier, minio.RemoveObjectOptions{})
 }

@@ -106,6 +106,10 @@ func (s *SQLiteBackend) Retrieve(c context.Context, identifier string) ([]byte, 
 	return data, nil
 }
 
+func (s *SQLiteBackend) Close() error {
+	return nil
+}
+
 func (s *SQLiteBackend) Delete(c context.Context, identifier string) error {
 	return s.db.WithContext(c).Delete(&SQLiteData{}, "id = ?", identifier).Error
 }
