@@ -1,4 +1,4 @@
-package fast
+package apptest
 
 import (
 	"math/rand"

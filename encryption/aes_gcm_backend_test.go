@@ -89,7 +89,7 @@ func TestAESGCM(t *testing.T) {
 						return nil
 					})
 
-				err = f.AESGCM.Save(context.Background(), id, []byte(clearText))
+				err = f.AESGCM.SaveTTL(context.Background(), id, []byte(clearText), 0)
 				require.NoError(t, err)
 
 				f.mockBackend.EXPECT().
@@ -142,7 +142,7 @@ func TestAESGCM(t *testing.T) {
 								return nil
 							})
 
-						err := f.AESGCM.Save(context.Background(), id, []byte(text))
+						err := f.AESGCM.SaveTTL(context.Background(), id, []byte(text), 0)
 						require.NoError(t, err)
 
 						w.How(cipherText)

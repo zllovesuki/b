@@ -1,4 +1,5 @@
 ignore:
-  - "box/"      # packaging related
-  - "response/" # responder
-  - "app/"      # mainly interfaces and mocks
+  - "box/"                      # packaging related
+  - "response/"                 # responder
+  - "app/backend_mocks.go"      # mainly interfaces and mocks
+  - "apptest/"                  # unified testing kit

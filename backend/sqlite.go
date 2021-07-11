@@ -53,10 +53,6 @@ func NewSQLiteBackend(dbPath string) (*SQLiteBackend, error) {
 	}, nil
 }
 
-func (s *SQLiteBackend) Save(c context.Context, identifier string, data []byte) error {
-	return s.SaveTTL(c, identifier, data, 0)
-}
-
 func (s *SQLiteBackend) SaveTTL(c context.Context, identifier string, data []byte, ttl time.Duration) error {
 	return s.db.WithContext(c).Transaction(func(tx *gorm.DB) error {
 		var d SQLiteData
@@ -95,7 +91,7 @@ func (s *SQLiteBackend) Retrieve(c context.Context, identifier string) ([]byte, 
 			return res.Error
 		}
 		if !d.Expires.IsZero() && time.Now().UTC().After(d.Expires) {
-			return app.ErrExpired
+			return app.ErrNotFound
 		}
 		data = d.Data
 		return nil

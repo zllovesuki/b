@@ -37,10 +37,6 @@ func NewAESGCMBackend(backend app.Backend, key []byte) (*AESGCM, error) {
 	}, nil
 }
 
-func (a *AESGCM) Save(c context.Context, identifier string, data []byte) error {
-	return a.SaveTTL(c, identifier, data, 0)
-}
-
 func (a *AESGCM) SaveTTL(c context.Context, identifier string, data []byte, ttl time.Duration) error {
 	ciphertext, err := a.encrypt(data)
 	if err != nil {

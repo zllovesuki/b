@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/zllovesuki/b/app"
 	"github.com/zllovesuki/b/response"
@@ -274,11 +275,11 @@ func TestSaveFile(t *testing.T) {
 			Return(nil, app.ErrNotFound)
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), metaPrefix+id, buf).
+			SaveTTL(gomock.Any(), metaPrefix+id, buf, time.Duration(0)).
 			Return(nil)
 
 		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), filePrefix+id, gomock.Any()).
+			SaveTTL(gomock.Any(), filePrefix+id, gomock.Any(), time.Duration(0)).
 			Return(length, nil)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
@@ -344,14 +345,14 @@ func TestSaveFile(t *testing.T) {
 
 		dep.mockMetadataBackend.EXPECT().
 			Retrieve(gomock.Any(), metaPrefix+id).
-			Return(nil, app.ErrExpired)
+			Return(nil, app.ErrNotFound)
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), metaPrefix+id, buf).
+			SaveTTL(gomock.Any(), metaPrefix+id, buf, time.Duration(0)).
 			Return(nil)
 
 		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), filePrefix+id, gomock.Any()).
+			SaveTTL(gomock.Any(), filePrefix+id, gomock.Any(), time.Duration(0)).
 			Return(length, nil)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
@@ -414,7 +415,7 @@ func TestSaveFile(t *testing.T) {
 			Return(nil, app.ErrNotFound)
 
 		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), filePrefix+id, gomock.Any()).
+			SaveTTL(gomock.Any(), filePrefix+id, gomock.Any(), time.Duration(0)).
 			Return(int64(0), fmt.Errorf("error"))
 
 		// since upload path has encountered an error, clean up
@@ -456,11 +457,11 @@ func TestSaveFile(t *testing.T) {
 			Return(nil, app.ErrNotFound)
 
 		dep.mockFileBackend.EXPECT().
-			Save(gomock.Any(), filePrefix+id, gomock.Any()).
+			SaveTTL(gomock.Any(), filePrefix+id, gomock.Any(), time.Duration(0)).
 			Return(length, nil)
 
 		dep.mockMetadataBackend.EXPECT().
-			Save(gomock.Any(), metaPrefix+id, buf).
+			SaveTTL(gomock.Any(), metaPrefix+id, buf, time.Duration(0)).
 			Return(app.ErrConflict)
 
 		// since upload path has encountered an error, clean up

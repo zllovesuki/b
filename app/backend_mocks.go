@@ -65,20 +65,6 @@ func (mr *MockBackendMockRecorder) Retrieve(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Retrieve", reflect.TypeOf((*MockBackend)(nil).Retrieve), arg0, arg1)
 }
 
-// Save mocks base method.
-func (m *MockBackend) Save(arg0 context.Context, arg1 string, arg2 []byte) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Save indicates an expected call of Save.
-func (mr *MockBackendMockRecorder) Save(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockBackend)(nil).Save), arg0, arg1, arg2)
-}
-
 // SaveTTL mocks base method.
 func (m *MockBackend) SaveTTL(arg0 context.Context, arg1 string, arg2 []byte, arg3 time.Duration) error {
 	m.ctrl.T.Helper()
@@ -143,21 +129,6 @@ func (m *MockFastBackend) Retrieve(arg0 context.Context, arg1 string) (io.ReadCl
 func (mr *MockFastBackendMockRecorder) Retrieve(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Retrieve", reflect.TypeOf((*MockFastBackend)(nil).Retrieve), arg0, arg1)
-}
-
-// Save mocks base method.
-func (m *MockFastBackend) Save(arg0 context.Context, arg1 string, arg2 io.ReadCloser) (int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Save indicates an expected call of Save.
-func (mr *MockFastBackendMockRecorder) Save(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockFastBackend)(nil).Save), arg0, arg1, arg2)
 }
 
 // SaveTTL mocks base method.
@@ -278,20 +249,6 @@ func (mr *MockRemovableBackendMockRecorder) Retrieve(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Retrieve", reflect.TypeOf((*MockRemovableBackend)(nil).Retrieve), arg0, arg1)
 }
 
-// Save mocks base method.
-func (m *MockRemovableBackend) Save(arg0 context.Context, arg1 string, arg2 []byte) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Save indicates an expected call of Save.
-func (mr *MockRemovableBackendMockRecorder) Save(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRemovableBackend)(nil).Save), arg0, arg1, arg2)
-}
-
 // SaveTTL mocks base method.
 func (m *MockRemovableBackend) SaveTTL(arg0 context.Context, arg1 string, arg2 []byte, arg3 time.Duration) error {
 	m.ctrl.T.Helper()
@@ -370,21 +327,6 @@ func (m *MockRemovableFastBackend) Retrieve(arg0 context.Context, arg1 string) (
 func (mr *MockRemovableFastBackendMockRecorder) Retrieve(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Retrieve", reflect.TypeOf((*MockRemovableFastBackend)(nil).Retrieve), arg0, arg1)
-}
-
-// Save mocks base method.
-func (m *MockRemovableFastBackend) Save(arg0 context.Context, arg1 string, arg2 io.ReadCloser) (int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save", arg0, arg1, arg2)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Save indicates an expected call of Save.
-func (mr *MockRemovableFastBackendMockRecorder) Save(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRemovableFastBackend)(nil).Save), arg0, arg1, arg2)
 }
 
 // SaveTTL mocks base method.

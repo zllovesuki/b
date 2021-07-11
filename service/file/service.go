@@ -73,7 +73,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	m, err := s.MetadataBackend.Retrieve(r.Context(), metaPrefix+id)
-	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
+	if errors.Is(err, app.ErrNotFound) {
 		response.WriteError(w, r, response.ErrNotFound().AddMessages("File either expired or does not exist"))
 		return
 	} else if err != nil {
@@ -91,7 +91,7 @@ func (s *Service) retrieveFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fileReader, err := s.FileBackend.Retrieve(r.Context(), filePrefix+id)
-	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
+	if errors.Is(err, app.ErrNotFound) {
 		s.Logger.Error("file backend returned not found when metadata exists", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Failed to locate file via metadata backend"))
 		return
@@ -128,7 +128,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		response.WriteError(w, r, response.ErrConflict().AddMessages("Conflicting identifier"))
 		return
-	} else if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
+	} else if errors.Is(err, app.ErrNotFound) {
 		// fallthrough, allow override on expired file
 	} else {
 		s.Logger.Error("unable to check metadata backend prior to processing", zap.Error(err), zap.String("id", id))
@@ -183,7 +183,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var written int64
-	written, err = s.FileBackend.Save(r.Context(), filePrefix+id, io.NopCloser(app.NewCtxReader(r.Context(), file)))
+	written, err = s.FileBackend.SaveTTL(r.Context(), filePrefix+id, io.NopCloser(app.NewCtxReader(r.Context(), file)), 0)
 	if errors.Is(err, app.ErrConflict) {
 		s.Logger.Error("metadata backend reported no conflict when checking but reported conflict on save", zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file"))
@@ -207,7 +207,7 @@ func (s *Service) saveFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.MetadataBackend.Save(r.Context(), metaPrefix+id, buf)
+	err = s.MetadataBackend.SaveTTL(r.Context(), metaPrefix+id, buf, 0)
 	if errors.Is(err, app.ErrConflict) {
 		s.Logger.Error("conflicting identifier in metadata backend when previous lookup reports no conflict", zap.Error(err), zap.String("id", id))
 		response.WriteError(w, r, response.ErrUnexpected().AddMessages("Unable to save file metadata"))

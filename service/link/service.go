@@ -91,7 +91,7 @@ func (s *Service) retrieveLink(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
 	long, err := s.Backend.Retrieve(r.Context(), prefix+id)
-	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
+	if errors.Is(err, app.ErrNotFound) {
 		response.WriteError(w, r, response.ErrNotFound().AddMessages("Link either expired or not found"))
 		return
 	} else if err != nil {

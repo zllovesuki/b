@@ -35,10 +35,6 @@ func NewRedisBackend(url string) (*RedisBackend, error) {
 	return b, nil
 }
 
-func (b *RedisBackend) Save(c context.Context, identifier string, data []byte) error {
-	return b.SaveTTL(c, identifier, data, 0)
-}
-
 func (b *RedisBackend) SaveTTL(c context.Context, identifier string, data []byte, ttl time.Duration) error {
 	s, err := b.cli.SetNX(c, identifier, data, ttl).Result()
 	if err != nil {

@@ -118,7 +118,7 @@ func (s *Service) retrieveText(w http.ResponseWriter, r *http.Request) {
 	html := strings.HasSuffix(r.RequestURI, ".html")
 
 	text, err := s.Backend.Retrieve(r.Context(), prefix+id)
-	if errors.Is(err, app.ErrNotFound) || errors.Is(err, app.ErrExpired) {
+	if errors.Is(err, app.ErrNotFound) {
 		response.WriteError(w, r, response.ErrNotFound().AddMessages("Text paste either expired or not found"))
 		return
 	} else if err != nil {

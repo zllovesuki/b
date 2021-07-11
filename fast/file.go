@@ -122,7 +122,7 @@ func (f *FileFastBackend) Retrieve(c context.Context, identifier string) (io.Rea
 		return nil, errors.Wrap(err, "error checking ttl of the file")
 	}
 	if expired {
-		return nil, app.ErrExpired
+		return nil, app.ErrNotFound
 	}
 
 	return file, nil
@@ -135,5 +135,11 @@ func (f *FileFastBackend) Close() error {
 func (f *FileFastBackend) Delete(c context.Context, identifier string) error {
 	p := filepath.Join(f.dataDir, identifier)
 
-	return os.Remove(p)
+	err := os.Remove(p)
+
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+
+	return err
 }

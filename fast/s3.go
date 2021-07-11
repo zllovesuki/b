@@ -188,7 +188,7 @@ func (s *S3FastBackend) Retrieve(c context.Context, identifier string) (io.ReadC
 		}
 	}()
 	if expired {
-		return nil, app.ErrExpired
+		return nil, app.ErrNotFound
 	}
 
 	reader, err := s.mc.GetObject(c, s.config.Bucket, identifier, minio.GetObjectOptions{})
