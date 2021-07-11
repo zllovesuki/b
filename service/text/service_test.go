@@ -179,7 +179,7 @@ func TestSaveText(t *testing.T) {
 		body := bytes.NewReader(txt)
 		id := "wqrewr"
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), body)
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
@@ -205,7 +205,7 @@ func TestSaveText(t *testing.T) {
 		txt := []byte("hello world")
 		body := bytes.NewReader(txt)
 		id := "wqrewr"
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), body)
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
@@ -226,7 +226,7 @@ func TestSaveText(t *testing.T) {
 		txt := []byte("hello world")
 		body := bytes.NewReader(txt)
 		id := "wqrewr"
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), body)
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
@@ -246,7 +246,7 @@ func TestSaveText(t *testing.T) {
 
 		id := "../../../etc/hello"
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), nil)
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), nil)
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
@@ -271,7 +271,7 @@ func TestSaveText(t *testing.T) {
 		buf, err := json.Marshal(&thing)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(buf))
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), bytes.NewBuffer(buf))
 		r.Header.Add("Content-Type", "application/json")
 		require.NoError(t, err)
 
@@ -286,7 +286,7 @@ func TestSaveText(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, "id/abce"), nil)
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, "id/abce"), nil)
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 
@@ -305,7 +305,7 @@ func TestSaveText(t *testing.T) {
 		txt := []byte("hello world")
 		body := bytes.NewReader(txt)
 		id := "wqrewr"
-		r, err := http.NewRequest("POST", service.Prefix(prefix, fmt.Sprintf("%s/%d", id, ttl)), body)
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, fmt.Sprintf("%s/%d", id, ttl)), body)
 		r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 		require.NoError(t, err)
 

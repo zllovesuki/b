@@ -228,7 +228,7 @@ func (s *Service) SaveRoute(r chi.Router) http.Handler {
 		r = chi.NewRouter()
 	}
 
-	r.Post(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.saveFile)
+	r.Put(service.Prefix(filePrefix, "{id:[a-zA-Z0-9]+}"), s.saveFile)
 
 	return r
 }

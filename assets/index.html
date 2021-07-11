@@ -368,7 +368,7 @@
 
                         let status;
                         fetch(url, {
-                            method: "POST",
+                            method: "PUT",
                             body: fd,
                         })
                             .then((response) => {
@@ -394,7 +394,7 @@
                         const url = `${baseUrl}l-${id}`;
                         let status;
                         fetch(url, {
-                            method: "POST",
+                            method: "PUT",
                             body: JSON.stringify({ url: forward }),
                             headers: { "Content-Type": "application/json" },
                         })
@@ -422,7 +422,7 @@
                         const url = `${baseUrl}t-${id}`;
                         let status;
                         fetch(url, {
-                            method: "POST",
+                            method: "PUT",
                             body: contents,
                             headers: { "Content-Type": "application/x-www-form-urlencoded" },
                         })

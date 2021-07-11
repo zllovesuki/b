@@ -110,8 +110,8 @@ func (s *Service) SaveRoute(r chi.Router) http.Handler {
 		r = chi.NewRouter()
 	}
 
-	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}/{ttl:[0-9]+}"), s.saveLink)
-	r.Post(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveLink)
+	r.Put(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}/{ttl:[0-9]+}"), s.saveLink)
+	r.Put(service.Prefix(prefix, "{id:[a-zA-Z0-9]+}"), s.saveLink)
 
 	return r
 }

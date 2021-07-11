@@ -42,7 +42,7 @@ Uploading a file:
 ```bash
 # Specifying an expiration time is in TODO.
 
-curl -X POST -F file=@Alaska.jpg https://example.com:3000/f-alaskan
+curl -X PUT -F file=@Alaska.jpg https://example.com:3000/f-alaskan
 {"result":"https://example.com:3000/f-alaskan","error":null,"messages":[]}
 ```
 
@@ -50,7 +50,7 @@ Pasting some text:
 ```bash
 # Optionally, you can specify when the paste expires in seconds: https://example.com:3000/t-footxt/60
 
-cat foo.txt | curl --data-binary @- https://example.com:3000/t-footxt
+cat foo.txt | curl -X PUT --data-binary @- https://example.com:3000/t-footxt
 {"result":"https://example.com:3000/t-footxt","error":null,"messages":[]}
 ```
 
@@ -59,7 +59,7 @@ Shortening a link:
 # Optionally, you can specify when the link expires in seconds: https://example.com:3000/l-longurl/60
 
 curl -H "Content-Type: application/json" \
-    -X POST \
+    -X PUT \
     --data '{"url": "https://llanfairpwllgwyngyllgogerychwyrndrobwllllantysiliogogogoch.co.uk/"}' \
     https://example.com:3000/l-longurl
 {"result":"https://example.com:3000/l-longurl","error":null,"messages":[]}

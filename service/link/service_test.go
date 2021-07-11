@@ -131,7 +131,7 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
@@ -161,7 +161,7 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
@@ -182,7 +182,7 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
@@ -207,7 +207,7 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(body))
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
@@ -224,7 +224,7 @@ func TestSaveLink(t *testing.T) {
 		dep, finish := getFixtures(t)
 		defer finish()
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, "id/aewrw"), nil)
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, "id/aewrw"), nil)
 		require.NoError(t, err)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)
@@ -247,7 +247,7 @@ func TestSaveLink(t *testing.T) {
 		body, err := json.Marshal(req)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, fmt.Sprintf("%s/%d", id, ttl)), bytes.NewBuffer(body))
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, fmt.Sprintf("%s/%d", id, ttl)), bytes.NewBuffer(body))
 		require.NoError(t, err)
 
 		dep.mockBackend.EXPECT().
@@ -273,7 +273,7 @@ func TestSaveLink(t *testing.T) {
 
 		id := "hello"
 
-		r, err := http.NewRequest("POST", service.Prefix(prefix, id), bytes.NewBuffer(payload))
+		r, err := http.NewRequest("PUT", service.Prefix(prefix, id), bytes.NewBuffer(payload))
 		require.NoError(t, err)
 
 		dep.service.SaveRoute(nil).ServeHTTP(dep.recorder, r)

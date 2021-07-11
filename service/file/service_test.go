@@ -266,7 +266,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -309,7 +309,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(&meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -339,7 +339,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -379,7 +379,7 @@ func TestSaveFile(t *testing.T) {
 
 		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
-		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -406,7 +406,7 @@ func TestSaveFile(t *testing.T) {
 
 		body, writer, _ := getMultipart(t, dep.testFile, meta)
 
-		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
@@ -448,7 +448,7 @@ func TestSaveFile(t *testing.T) {
 		buf, err := json.Marshal(&meta)
 		require.NoError(t, err)
 
-		r, err := http.NewRequest("POST", service.Prefix(filePrefix, id), body)
+		r, err := http.NewRequest("PUT", service.Prefix(filePrefix, id), body)
 		require.NoError(t, err)
 		r.Header.Add("Content-Type", writer.FormDataContentType())
 
