@@ -6,8 +6,8 @@ import (
 
 	"github.com/zllovesuki/b/app"
 
+	"github.com/glebarez/sqlite"
 	"github.com/pkg/errors"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"

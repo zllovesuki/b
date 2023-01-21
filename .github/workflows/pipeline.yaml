@@ -2,7 +2,7 @@ name: Pipeline
 on:
   push:
     paths-ignore:
-      - '**.md'
+      - "**.md"
 
 jobs:
   testing:
@@ -35,14 +35,14 @@ jobs:
         ports:
           - 9000:9000
 
-    steps: 
+    steps:
       - name: Checkout repository code
         uses: actions/checkout@v2
 
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16.5
+          go-version: 1.19.5
 
       - uses: actions/cache@v2
         with:
@@ -80,7 +80,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16.5
+          go-version: 1.19.5
 
       - uses: actions/cache@v2
         with:
@@ -126,7 +126,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16.5
+          go-version: 1.19.5
 
       - uses: actions/cache@v2
         with:
@@ -207,7 +207,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16.5
+          go-version: 1.19.5
 
       - uses: actions/cache@v2
         with:

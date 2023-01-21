@@ -1,14 +1,23 @@
-FROM golang:1.16.5-buster AS builder
-WORKDIR /build
-COPY . /build/
-RUN apt-get update && apt-get install build-essential -y
-RUN go build -tags "sqlite_omit_load_extension osusergo netgo" -ldflags="-s -w -linkmode external -extldflags '-fno-PIC -static'" -buildmode=pie -o bin/b-linux-amd64 ./cmd/b
+# syntax = docker/dockerfile:1-experimental
 
-FROM alpine:3.14.0
-RUN apk --no-cache add ca-certificates
+FROM --platform=$BUILDPLATFORM golang:1.19.5-alpine as builder
+RUN apk --no-cache add ca-certificates git upx
 WORKDIR /app
-RUN mkdir /app/data
+COPY . .
+
+ARG TARGETOS
+ARG TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOARM=7 GOAMD64=v3 \
+    go build -tags 'osusergo netgo' \
+    -ldflags "-s -w -extldflags -static" \
+    -o bin/b ./cmd/b
+RUN upx --best --lzma bin/b
+
+FROM scratch
+WORKDIR /app
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /app/bin/b /app/b
 COPY config.yaml /app/default.yaml
-COPY --from=builder /build/bin/b-linux-amd64 /app/b
-ENTRYPOINT [ "/app/b" ]
+
+ENTRYPOINT ["/app/b"]
 CMD ["-config", "default.yaml"]
